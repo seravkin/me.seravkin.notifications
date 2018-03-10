@@ -1,5 +1,8 @@
 package me.seravkin.notifications.bot
 
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
+
 import cats._
 import cats.data.OptionT
 import cats.syntax.all._
@@ -103,8 +106,9 @@ object NotificationBot {
     private[this] def tryStore(user: User, message: Msg, text: String, notification: String): F[Boolean] = {
       momentInFutureParser.parse(notification) match {
         case Right(momentInFuture) =>
-          (notificationsRepository += OneTime(0, user.id, text, momentInFuture.toExecutionTime(systemDateTime.now), isActive = true)) >>
-          sender.send(message.chatId, "Напоминание поставлено") >>
+          val time = momentInFuture.toExecutionTime(systemDateTime.now)
+          (notificationsRepository += OneTime(0, user.id, text, time, isActive = true)) >>
+          sender.send(message.chatId, s"Напоминание поставлено и будет отправлено ${beautify(time)}") >>
           true.pure[F]
         case Left(error) =>
           sender.send(message.chatId, s"Время в неправильном формате. Ошибка: $error") >>
@@ -112,11 +116,29 @@ object NotificationBot {
       }
     }
 
+    private[this] def beautify(time: LocalDateTime) = {
+      val formattedTime = time.format(DateTimeFormatter.ofPattern(TIME_FORMAT))
+
+      val date =
+        if (systemDateTime.now.getDayOfYear != time.getDayOfYear)
+          time.format(DateTimeFormatter.ofPattern(DATE_SHORT))
+        else
+          ""
+
+      val dateWhiteSpace = if (date.isEmpty) "" else date + " "
+
+      dateWhiteSpace + "в " + formattedTime
+    }
+
     private[this] val HasNotificationId = "notification-([0-9]+)".r
 
     private[this] def show(notifications: List[Notification]): String =
       "Напоминания:\n" +
         notifications.map(n => s"Напоминание ${n.id} о " + "\"" + n.text + "\"").foldLeft("") { _ + "\n" + _ }
+
+    private[this] val DATE_SHORT = "dd.MM"
+    private[this] val TIME_FORMAT = "HH:mm"
+
   }
 
 

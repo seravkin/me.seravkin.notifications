@@ -40,5 +40,6 @@ libraryDependencies ++= Seq(
   // Optional for auto-derivation of JSON codecs
   "io.circe" %% "circe-generic" % "0.9.1",
   // Optional for string interpolation to JSON model
-  "io.circe" %% "circe-literal" % "0.9.1"
+  "io.circe" %% "circe-literal" % "0.9.1",
+  "com.typesafe" % "config" % "1.3.2"
 )

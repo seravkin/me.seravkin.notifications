@@ -1,8 +1,11 @@
 package me.seravkin.notifications
 
+import java.io.File
+import java.nio.file.{Files, Path, Paths}
 import java.sql.Connection
 import java.util.concurrent.TimeUnit
 
+import com.typesafe.config.ConfigFactory
 import doobie.free.KleisliInterpreter
 import doobie.free.connection.unit
 import doobie.util.transactor.{Strategy, Transactor}
@@ -20,49 +23,15 @@ import me.seravkin.notifications.persistance.botio.{DoobieNotificationTasksRepos
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
 import me.seravkin.notifications.domain.services.NotificationTasksServiceImpl
+import me.seravkin.notifications.infrastructure.config.Configuration
 import monix.eval.Task
 import monix.execution.Scheduler.Implicits.global
+import me.seravkin.notifications.integration.TelegramForScalaIntegration._
 
 import scala.collection.concurrent.TrieMap
 import scala.util.{Failure, Success}
 
 object Main extends App with TelegramBot with Polling {
-
-  private[this] val trieMap = new TrieMap[Long, ChatState]()
-
-  implicit def messageForMessage: infrastructure.messages.Message[Message] = new messages.Message[Message] {
-    override def data(msg: Message): Option[String] =
-      None
-
-    override def chatId(msg: Message): Long =
-      msg.chat.id
-
-    override def text(msg: Message): Option[String] =
-      msg.text
-
-    override def username(msg: Message): Option[String] =
-      msg.chat.username
-
-    override def isPrivate(msg: Message): Boolean =
-      msg.chat.`type` == ChatType.Private
-  }
-
-  implicit def messageForCallbackQuery: infrastructure.messages.Message[CallbackQuery] = new messages.Message[CallbackQuery] {
-    override def data(msg: CallbackQuery): Option[String] =
-      msg.data
-
-    override def chatId(msg: CallbackQuery): Long =
-      msg.message.get.chat.id
-
-    override def text(msg: CallbackQuery): Option[String] =
-      None
-
-    override def username(msg: CallbackQuery): Option[String] =
-      msg.from.username
-
-    override def isPrivate(msg: CallbackQuery): Boolean =
-      msg.message.get.chat.`type` == ChatType.Private
-  }
 
   private[this] def botFor[Msg: infrastructure.messages.Message] =
     NotificationBotBuilder[Msg, BotIO](
@@ -79,18 +48,11 @@ object Main extends App with TelegramBot with Polling {
     DoobieNotificationsRepository,
     BotIOSender)
 
+  private[this] val trieMap = new TrieMap[Long, ChatState]()
   private[this] val messageBot = botFor[Message]
   private[this] val callbackQueryBot = botFor[CallbackQuery]
-
-  private[this] val config = new HikariConfig
-  config.setJdbcUrl("jdbc:postgresql://localhost:5432/notification_bot")
-  config.setUsername("postgres")
-  config.setPassword("")
-  config.addDataSourceProperty("cachePrepStmts", "true")
-  config.addDataSourceProperty("prepStmtCacheSize", "250")
-  config.addDataSourceProperty("prepStmtCacheSqlLimit", "2048")
-
-  private[this] val ds = new HikariDataSource(config)
+  private[this] lazy val config = Configuration.load()
+  private[this] val ds = new HikariDataSource(config.hikariConfig.toHikariConfig)
 
   private[this] def interpret(botIO: BotIO[Unit])(chatId: Option[Long]) = {
     val connection: Connection = ds.getConnection
@@ -117,18 +79,18 @@ object Main extends App with TelegramBot with Polling {
   private[this] def interpret[T: infrastructure.messages.Message](bot: Bot[T, BotIO])(message: T, chatId: Long): Unit =
     interpret(bot(message))(Some(chatId))
 
-  def token = ""
+  def token = config.telegramApiKey
 
   override def receiveMessage(message: Message): Unit =
     interpret(messageBot)(message, message.chat.id)
 
   override def receiveCallbackQuery(callbackQuery: CallbackQuery): Unit = {
-    if(callbackQuery.message.nonEmpty) {
+    if (callbackQuery.message.nonEmpty) {
       interpret(callbackQueryBot)(callbackQuery, callbackQuery.message.get.chat.id)
     }
   }
 
-  global.scheduleWithFixedDelay(10, 10, TimeUnit.SECONDS, () => {
+  global.scheduleWithFixedDelay(config.secondsForScheduler, config.secondsForScheduler, TimeUnit.SECONDS, () => {
     interpret(service.sendNotificationsIfNeeded())(None)
   })
 

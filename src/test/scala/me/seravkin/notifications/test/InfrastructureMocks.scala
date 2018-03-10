@@ -1,5 +1,7 @@
 package me.seravkin.notifications.test
 
+import java.time.LocalDateTime
+
 import cats.data._
 import cats._
 import cats.syntax.all._
@@ -8,11 +10,16 @@ import me.seravkin.notifications.domain.Notifications.{Notification, OneTime, Re
 import me.seravkin.notifications.domain.User
 import me.seravkin.notifications.infrastructure.messages.{Button, Message, Sender}
 import me.seravkin.notifications.infrastructure.state.ChatStateRepository
+import me.seravkin.notifications.infrastructure.time.SystemDateTime
 import me.seravkin.notifications.persistance.{NotificationsRepository, UsersRepository}
 import shapeless._
 
 trait InfrastructureMocks {
   final case class TestMessage(user: User, text: String, data: Option[String] = None, buttons: List[Button] = Nil)
+
+  final case class MockDateTime(dateTime: LocalDateTime) extends SystemDateTime {
+    override def now: LocalDateTime = dateTime
+  }
 
   implicit val messageInstance: Message[TestMessage] = new Message[TestMessage] {
 

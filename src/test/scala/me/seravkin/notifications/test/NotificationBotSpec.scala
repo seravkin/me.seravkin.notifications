@@ -22,6 +22,7 @@ class NotificationBotSpec extends FlatSpec with Matchers with InfrastructureMock
 
   val defaultUser = User(1, Some(1), "test")
   val defaultUserId = defaultUser.id
+  val mockedDateTime = MockDateTime(LocalDateTime.of(2018, 8, 22, 12, 0, 0))
 
   val existingNotifications =  Vector(
     OneTime(1, defaultUserId, "test 1", LocalDateTime.now(), true),
@@ -38,7 +39,7 @@ class NotificationBotSpec extends FlatSpec with Matchers with InfrastructureMock
       TestSender,
       CombinatorMomentInFutureParser,
       TestNotificationRepository,
-      ActualSystemDateTime).build
+      mockedDateTime).build
 
   "Notifications bot" should "show help when help command is sent" in {
     val (state, _) = send("/help").run(BotState(defaultUser :: Nil)).value
@@ -90,7 +91,7 @@ class NotificationBotSpec extends FlatSpec with Matchers with InfrastructureMock
       _  <- send("test 1");
       _  <- shouldAnswerWith("Введите желаемое время:");
       _  <- send("завтра в 12:35");
-      _  <- shouldAnswerWith("Напоминание поставлено")
+      _  <- shouldAnswerWith("Напоминание поставлено и будет отправлено 23.08 в 12:35")
     ) yield ()
 
     val (state, _) = dialogue.run(BotState(users = defaultUser :: Nil)).value
@@ -111,7 +112,7 @@ class NotificationBotSpec extends FlatSpec with Matchers with InfrastructureMock
       _  <- send("завтра в 42:35");
       _  <- shouldAnswerWith(_.startsWith("Время в неправильном формате"));
       _  <- send("завтра в 0:32");
-      _  <- shouldAnswerWith("Напоминание поставлено")
+      _  <- shouldAnswerWith("Напоминание поставлено и будет отправлено 23.08 в 00:32")
     ) yield ()
 
     val (state, _) = dialogue.run(BotState(users = defaultUser :: Nil)).value
@@ -139,7 +140,7 @@ class NotificationBotSpec extends FlatSpec with Matchers with InfrastructureMock
   it should "parse notification request and store notification if request is correct and in one line" in {
     val dialogue = for(
       _  <- send("/in \"test 1\" сегодня в 8:49");
-      _  <- shouldAnswerWith("Напоминание поставлено")
+      _  <- shouldAnswerWith("Напоминание поставлено и будет отправлено в 08:49")
     ) yield ()
 
     val (state, _) = dialogue.run(BotState(users = defaultUser :: Nil)).value
@@ -154,9 +155,9 @@ class NotificationBotSpec extends FlatSpec with Matchers with InfrastructureMock
   it should "work correctly in longer dialogue with creating showing and deleting notifications" in {
     val dialogue = for(
       _ <- send("/in \"test 1\" 22.08 в 23:55");
-      _ <- shouldAnswerWith("Напоминание поставлено");
+      _ <- shouldAnswerWith("Напоминание поставлено и будет отправлено в 23:55");
       _ <- send("/in \"test 2\" через 4 дня в это же время");
-      _ <- shouldAnswerWith("Напоминание поставлено");
+      _ <- shouldAnswerWith("Напоминание поставлено и будет отправлено 26.08 в 12:00");
       _ <- send("/show");
       _ <- shouldAnswerWith(t => t.contains("test 1") && t.contains("test 2"));
       _ <- send("/in");
