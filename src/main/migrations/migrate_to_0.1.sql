@@ -16,4 +16,3 @@ CREATE TABLE notifications (
 
 CREATE INDEX XI_USER ON notifications(id_user);
 CREATE INDEX XI_DT_TO_NOTIFICATE ON notifications(is_active, dt_to_notificate);
-

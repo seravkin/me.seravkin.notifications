@@ -17,48 +17,40 @@ import me.seravkin.notifications.infrastructure.time.ActualSystemDateTime
 import me.seravkin.notifications.persistance.NotificationsRepository
 import org.scalatest._
 import shapeless._
+import me.seravkin.notifications.test.mocks._
 
-class NotificationBotSpec extends FlatSpec with Matchers with InfrastructureMocks {
-
-  val defaultUser = User(1, Some(1), "test")
-  val defaultUserId = defaultUser.id
-  val mockedDateTime = MockDateTime(LocalDateTime.of(2018, 8, 22, 12, 0, 0))
-
-  val existingNotifications =  Vector(
-    OneTime(1, defaultUserId, "test 1", LocalDateTime.now(), true),
-    OneTime(2, defaultUserId, "test 1 na", LocalDateTime.now(), false),
-    Recurrent(3, defaultUserId, "rec test 1", LocalDateTime.now(), LocalDateTime.now(), true),
-    Recurrent(4, defaultUserId, "rec test 1 - na", LocalDateTime.now(), LocalDateTime.now(), false),
-    Recurrent(5, defaultUserId + 1, "asdasd", LocalDateTime.now(), LocalDateTime.now(), true)
-  )
-
-  val bot: Bot[TestMessage, State[BotState, ?]] =
-    NotificationBotBuilder[TestMessage, State[BotState, ?]](
-      TestUsersRepository(defaultUser),
-      TestChatStateRepository,
-      TestSender,
-      CombinatorMomentInFutureParser,
-      TestNotificationRepository,
-      mockedDateTime).build
+class NotificationBotSpec extends FlatSpec with Matchers {
 
   "Notifications bot" should "show help when help command is sent" in {
-    val (state, _) = send("/help").run(BotState(defaultUser :: Nil)).value
+    val dialogue = for(
+      _ <- send("/help");
+      _ <- shouldAnswerWith(helpText)
+    ) yield ()
 
-    botShouldDoOneReplyWithText(state, "Бот c напоминаниями\n" +
-      "/in - Напоминает о событии через заданный интервал времени\n" +
-      "/show - Показывает активные напоминания\n" +
-      "/delete <id> - Удаляет напоминания с указанным id")
+    dialogue.run(MockBotState(defaultUser :: Nil)).value
+  }
+
+  it should "show help on start command too" in {
+    val dialogue = for(
+      _ <- send("/start");
+      _ <- shouldAnswerWith(helpText)
+    ) yield ()
+
+    dialogue.run(MockBotState(defaultUser :: Nil)).value
   }
 
   it should "show active notifications for current user if they are present when show command is sent" in {
+    val dialogue = for(
+      _ <- send("/show");
+      _ <- shouldAnswerWith("Напоминания:\n\n" +
+        "Напоминание 1 о \"test 1\"\n" +
+        "Напоминание 3 о \"rec test 1\"")
+    ) yield ()
 
-    val (state, _) = send("/show")
-      .run(BotState(defaultUser :: Nil, notifications = existingNotifications.toList))
+
+    dialogue
+      .run(MockBotState(defaultUser :: Nil, notifications = existingNotifications.toList))
       .value
-
-    botShouldDoOneReplyWithText(state, "Напоминания:\n\n" +
-      "Напоминание 1 о \"test 1\"\n" +
-      "Напоминание 3 о \"rec test 1\"")
   }
 
   it should "deny access for not authorized user" in {
@@ -67,21 +59,24 @@ class NotificationBotSpec extends FlatSpec with Matchers with InfrastructureMock
       _ <- shouldAnswerWith("Пользователь не аутентифицирован для данного сервиса")
     ) yield ()
 
-    dialogue.run(BotState(users = defaultUser :: Nil)).value
+    dialogue.run(MockBotState(users = defaultUser :: Nil)).value
   }
 
   it should "make active notification for current user unactive when delete command is sent if id is correct" in {
 
-    val (state, _) = send("/delete 1")
-        .run(BotState(defaultUser :: Nil, notifications = existingNotifications.toList))
+    val dialogue = for(
+      _ <- send("/delete 1");
+      _ <- shouldAnswerWith("Напоминание удалено")
+    ) yield ()
+
+    val (state, _) = dialogue
+        .run(MockBotState(defaultUser :: Nil, notifications = existingNotifications.toList))
         .value
 
     val changedNotification = state.notifications.find(_.id == 1)
 
     changedNotification.nonEmpty should be (true)
     changedNotification.get.isActive should be (false)
-
-    botShouldDoOneReplyWithText(state, "Напоминание удалено")
   }
 
   it should "parse notification request and store notification if request is correct" in {
@@ -94,7 +89,7 @@ class NotificationBotSpec extends FlatSpec with Matchers with InfrastructureMock
       _  <- shouldAnswerWith("Напоминание поставлено и будет отправлено 23.08 в 12:35")
     ) yield ()
 
-    val (state, _) = dialogue.run(BotState(users = defaultUser :: Nil)).value
+    val (state, _) = dialogue.run(MockBotState(users = defaultUser :: Nil)).value
 
     state.notifications.length should be (1)
 
@@ -115,7 +110,7 @@ class NotificationBotSpec extends FlatSpec with Matchers with InfrastructureMock
       _  <- shouldAnswerWith("Напоминание поставлено и будет отправлено 23.08 в 00:32")
     ) yield ()
 
-    val (state, _) = dialogue.run(BotState(users = defaultUser :: Nil)).value
+    val (state, _) = dialogue.run(MockBotState(users = defaultUser :: Nil)).value
 
     state.notifications.length should be (1)
 
@@ -132,7 +127,7 @@ class NotificationBotSpec extends FlatSpec with Matchers with InfrastructureMock
       _  <- shouldAnswerWith("Создание напоминания отменено")
     ) yield ()
 
-    val (state, _) = dialogue.run(BotState(users = defaultUser :: Nil)).value
+    val (state, _) = dialogue.run(MockBotState(users = defaultUser :: Nil)).value
 
     state.notifications.length should be (0)
   }
@@ -143,7 +138,7 @@ class NotificationBotSpec extends FlatSpec with Matchers with InfrastructureMock
       _  <- shouldAnswerWith("Напоминание поставлено и будет отправлено в 08:49")
     ) yield ()
 
-    val (state, _) = dialogue.run(BotState(users = defaultUser :: Nil)).value
+    val (state, _) = dialogue.run(MockBotState(users = defaultUser :: Nil)).value
 
     state.notifications.length should be (1)
 
@@ -169,31 +164,51 @@ class NotificationBotSpec extends FlatSpec with Matchers with InfrastructureMock
       _ <- shouldAnswerWith(t => t.contains("test 2") && t.contains("test 3"))
     ) yield ()
 
-    val (state, _) = dialogue.run(BotState(users = defaultUser :: Nil)).value
+    val (state, _) = dialogue.run(MockBotState(users = defaultUser :: Nil)).value
 
     state.notifications.length should be (3)
   }
 
 
   private[this] def send(text: String, user: User = defaultUser) =
-    bot(TestMessage(user, text))
+    bot(MockMessage(user, text))
 
-  private[this] def shouldAnswerWith(text: String) = State.get[BotState] map { state =>
+  private[this] def shouldAnswerWith(text: String) = State.get[MockBotState] map { state =>
     val lastMessage = state.sentMessages.last
 
     lastMessage.text should be (text)
   }
 
-  private[this] def shouldAnswerWith(f: String => Boolean) = State.get[BotState] map { state =>
+  private[this] def shouldAnswerWith(f: String => Boolean) = State.get[MockBotState] map { state =>
     val lastMessage = state.sentMessages.last
 
     f(lastMessage.text) should be (true)
   }
 
-  private[this] def botShouldDoOneReplyWithText(state: BotState, text: String) = {
-    state.sentMessages.length should be (1)
+  private[this] val defaultUser = User(1, Some(1), "test")
+  private[this] val defaultUserId = defaultUser.id
+  private[this] val mockedDateTime = MockDateTime(LocalDateTime.of(2018, 8, 22, 12, 0, 0))
 
-    state.sentMessages.head.user.chatId should be (defaultUser.chatId)
-    state.sentMessages.head.text should be (text)
-  }
+  private[this] val helpText = "Бот c напоминаниями\n" +
+    "/in - Напоминает о событии через заданный интервал времени\n" +
+    "/show - Показывает активные напоминания\n" +
+    "/delete <id> - Удаляет напоминания с указанным id"
+
+  private[this] val existingNotifications =  Vector(
+    OneTime(1, defaultUserId, "test 1", LocalDateTime.now(), true),
+    OneTime(2, defaultUserId, "test 1 na", LocalDateTime.now(), false),
+    Recurrent(3, defaultUserId, "rec test 1", LocalDateTime.now(), LocalDateTime.now(), true),
+    Recurrent(4, defaultUserId, "rec test 1 - na", LocalDateTime.now(), LocalDateTime.now(), false),
+    Recurrent(5, defaultUserId + 1, "asdasd", LocalDateTime.now(), LocalDateTime.now(), true)
+  )
+
+  private[this] val bot: Bot[MockMessage, State[MockBotState, ?]] =
+    NotificationBotBuilder[MockMessage, State[MockBotState, ?]](
+      MockUsersRepository(defaultUser),
+      MockChatStateRepository,
+      MockSender,
+      CombinatorMomentInFutureParser,
+      MockNotificationRepository,
+      mockedDateTime).build
+
 }

@@ -25,6 +25,7 @@ object NotificationBot {
   final case object InControlWaitingForText extends ChatState
   final case class  InControlWaitingForTime(chatId: Long, text: String) extends ChatState
 
+
   final case class NotificationBotBuilder[Msg: Message, F[_]: Monad](
                                        usersRepository: UsersRepository[F],
                                        chatStateRepository: ChatStateRepository[ChatState, F],
@@ -55,10 +56,10 @@ object NotificationBot {
     private[this] def process(user: User, chatState: ChatState, message: Msg): F[Unit] = (chatState, message) match {
 
       case (Nop, ContainsText("/help")) =>
-        sender.send(message.chatId, "Бот c напоминаниями\n" +
-          "/in - Напоминает о событии через заданный интервал времени\n" +
-          "/show - Показывает активные напоминания\n" +
-          "/delete <id> - Удаляет напоминания с указанным id")
+        sender.send(message.chatId, HELP_TEXT)
+
+      case (Nop, ContainsText("/start")) =>
+        sender.send(message.chatId, HELP_TEXT)
 
       case (Nop, ContainsText("/show")) =>
         for (notifications <- notificationsRepository(user);
@@ -104,15 +105,15 @@ object NotificationBot {
     }
 
     private[this] def tryStore(user: User, message: Msg, text: String, notification: String): F[Boolean] = {
-      momentInFutureParser.parse(notification) match {
+      momentInFutureParser.parseMomentInFuture(notification) match {
         case Right(momentInFuture) =>
           val time = momentInFuture.toExecutionTime(systemDateTime.now)
-          (notificationsRepository += OneTime(0, user.id, text, time, isActive = true)) >>
-          sender.send(message.chatId, s"Напоминание поставлено и будет отправлено ${beautify(time)}") >>
-          true.pure[F]
+          for(_ <- notificationsRepository += OneTime(0, user.id, text, time, isActive = true);
+              _ <- sender.send(message.chatId, s"Напоминание поставлено и будет отправлено ${beautify(time)}"))
+            yield true
         case Left(error) =>
-          sender.send(message.chatId, s"Время в неправильном формате. Ошибка: $error") >>
-          false.pure[F]
+          for(_ <- sender.send(message.chatId, s"Время в неправильном формате. Ошибка: $error"))
+            yield false
       }
     }
 
@@ -138,6 +139,10 @@ object NotificationBot {
 
     private[this] val DATE_SHORT = "dd.MM"
     private[this] val TIME_FORMAT = "HH:mm"
+    private[this] val HELP_TEXT = "Бот c напоминаниями\n" +
+      "/in - Напоминает о событии через заданный интервал времени\n" +
+      "/show - Показывает активные напоминания\n" +
+      "/delete <id> - Удаляет напоминания с указанным id"
 
   }
 
