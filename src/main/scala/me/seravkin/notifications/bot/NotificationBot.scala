@@ -71,6 +71,9 @@ object NotificationBot {
         notificationsRepository.deactivate(id :: Nil) >>
           sender.send(message.chatId, "Напоминание удалено")
 
+      case (Nop, ContainsText(CommandWithArgs("/change", IsLong(id) :: Nil))) =>
+        changeNotificationDate(message, id)
+
       case (Nop, ContainsText("/in")) =>
         chatStateRepository.set(InControlWaitingForText) >>
           sender.send(message.chatId, "Введите напоминание:")
@@ -93,15 +96,19 @@ object NotificationBot {
           ().pure[F]
 
       case (Nop, ContainsData(HasNotificationId(id))) =>
-        (for(notification <- OptionT(notificationsRepository(id.toLong));
-             user         <- OptionT(usersRepository(notification.userId));
-             chatId       <- OptionT.fromOption[F](user.chatId);
-             _            <- OptionT.liftF(chatStateRepository.set(InControlWaitingForTime(chatId, notification.text)));
-             _            <- OptionT.liftF(sender.send(chatId, "Введите желаемое время для переноса напоминания:")))
-          yield ()).getOrElse()
+        changeNotificationDate(message, id.toLong)
 
       case (_, msg) =>
         sender.send(msg.chatId, "Неизвестная команда")
+    }
+
+    private[this] def changeNotificationDate(message: Msg, id: Long) = {
+      (for (notification <- OptionT(notificationsRepository(id));
+            user         <- OptionT(usersRepository(notification.userId));
+            chatId       <- OptionT.fromOption[F](user.chatId);
+            _            <- OptionT.liftF(chatStateRepository.set(InControlWaitingForTime(chatId, notification.text)));
+            _            <- OptionT.liftF(sender.send(chatId, "Введите желаемое время для переноса напоминания:")))
+        yield ()).getOrElseF(sender.send(message.chatId, s"Напоминание с id $id не найдено"))
     }
 
     private[this] def tryStore(user: User, message: Msg, text: String, notification: String): F[Boolean] = {
@@ -142,7 +149,8 @@ object NotificationBot {
     private[this] val HELP_TEXT = "Бот c напоминаниями\n" +
       "/in - Напоминает о событии через заданный интервал времени\n" +
       "/show - Показывает активные напоминания\n" +
-      "/delete <id> - Удаляет напоминания с указанным id"
+      "/delete <id> - Удаляет напоминания с указанным id\n" +
+      "/change <id> - Изменяет дату и время на напоминании с указанным id"
 
   }
 

@@ -169,6 +169,30 @@ class NotificationBotSpec extends FlatSpec with Matchers {
     state.notifications.length should be (3)
   }
 
+  it should "change notification date if requested" in {
+    val dialogue = for(
+      _ <- send("/in \"test 1\" 22.08 в 23:55");
+      _ <- shouldAnswerWith("Напоминание поставлено и будет отправлено в 23:55");
+      _ <- send("/change 0");
+      _ <- shouldAnswerWith("Введите желаемое время для переноса напоминания:");
+      _ <- send("22.08 в 23:57");
+      _ <- shouldAnswerWith("Напоминание поставлено и будет отправлено в 23:57")
+    ) yield ()
+
+    dialogue.run(MockBotState(users = defaultUser :: Nil)).value
+  }
+
+  it should "warn if notification id does not exists" in {
+    val dialogue = for(
+      _ <- send("/in \"test 1\" 22.08 в 23:55");
+      _ <- shouldAnswerWith("Напоминание поставлено и будет отправлено в 23:55");
+      _ <- send("/change 5");
+      _ <- shouldAnswerWith("Напоминание с id 5 не найдено")
+    ) yield ()
+
+    dialogue.run(MockBotState(users = defaultUser :: Nil)).value
+  }
+
 
   private[this] def send(text: String, user: User = defaultUser) =
     bot(MockMessage(user, text))
@@ -192,7 +216,8 @@ class NotificationBotSpec extends FlatSpec with Matchers {
   private[this] val helpText = "Бот c напоминаниями\n" +
     "/in - Напоминает о событии через заданный интервал времени\n" +
     "/show - Показывает активные напоминания\n" +
-    "/delete <id> - Удаляет напоминания с указанным id"
+    "/delete <id> - Удаляет напоминания с указанным id\n" +
+    "/change <id> - Изменяет дату и время на напоминании с указанным id"
 
   private[this] val existingNotifications =  Vector(
     OneTime(1, defaultUserId, "test 1", LocalDateTime.now(), true),
