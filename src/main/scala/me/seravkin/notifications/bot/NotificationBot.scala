@@ -11,7 +11,7 @@ import me.seravkin.notifications.domain._
 import me.seravkin.notifications.domain.algebra.BotAlgebra.BotIO
 import me.seravkin.notifications.domain.parsing.MomentInFutureParser
 import me.seravkin.notifications.infrastructure.Bot
-import me.seravkin.notifications.infrastructure.messages.{Message, Sender}
+import me.seravkin.notifications.infrastructure.messages.{Button, Message, Sender}
 import me.seravkin.notifications.infrastructure.messages.Message._
 import me.seravkin.notifications.infrastructure.state.ChatStateRepository
 import me.seravkin.notifications.infrastructure.time.SystemDateTime
@@ -55,26 +55,32 @@ object NotificationBot {
 
     private[this] def process(user: User, chatState: ChatState, message: Msg): F[Unit] = (chatState, message) match {
 
-      case (Nop, ContainsText("/help")) =>
+      case HasMessage(ContainsText("/help")) =>
         sender.send(message.chatId, HELP_TEXT)
 
-      case (Nop, ContainsText("/start")) =>
+      case HasMessage(ContainsText("/start")) =>
         sender.send(message.chatId, HELP_TEXT)
 
-      case (Nop, ContainsText("/show")) =>
+      case HasMessage(ContainsText("/show")) =>
         for (notifications <- notificationsRepository(user);
              answer        =  show(notifications);
              _             <- sender.send(message.chatId, answer))
           yield ()
 
-      case (Nop, ContainsText(CommandWithArgs("/delete", IsLong(id) :: Nil))) =>
+      case HasMessage(ContainsText(CommandWithArgs("/delete", IsLong(id) :: Nil))) =>
         notificationsRepository.deactivate(id :: Nil) >>
           sender.send(message.chatId, "Напоминание удалено")
 
-      case (Nop, ContainsText(CommandWithArgs("/change", IsLong(id) :: Nil))) =>
+      case HasMessage(ContainsText(CommandWithArgs("/change", IsLong(id) :: Nil))) =>
         changeNotificationDate(message, id)
 
-      case (Nop, ContainsText("/in")) =>
+      case HasMessage(ContainsText(CommandWithArgs("/list", Nil))) =>
+        for(notifications <- notificationsRepository(user, 0, 3);
+            answer        =  show(notifications);
+            _             <- sender.send(message.chatId, answer))
+          yield ()
+
+      case HasMessage(ContainsText("/in")) =>
         chatStateRepository.set(InControlWaitingForText) >>
           sender.send(message.chatId, "Введите напоминание:")
 
@@ -91,11 +97,11 @@ object NotificationBot {
             _         <- chatStateRepository.set(if(isSuccess) Nop else s))
           yield ()
 
-      case (Nop, ContainsText(CommandWithQuotedArgs("/in", text :: TailAsText(notification)))) =>
+      case HasMessage(ContainsText(CommandWithQuotedArgs("/in", text :: TailAsText(notification)))) =>
         tryStore(user, message, text, notification) >>
           ().pure[F]
 
-      case (Nop, ContainsData(HasNotificationId(id))) =>
+      case HasMessage(ContainsData(HasNotificationId(id))) =>
         changeNotificationDate(message, id.toLong)
 
       case (_, msg) =>
@@ -151,6 +157,18 @@ object NotificationBot {
       "/show - Показывает активные напоминания\n" +
       "/delete <id> - Удаляет напоминания с указанным id\n" +
       "/change <id> - Изменяет дату и время на напоминании с указанным id"
+
+    private object HasMessage {
+      def unapply(arg: (ChatState, Msg)): Option[Msg] = arg match {
+        case (Nop, msg) => Some(msg)
+        case _ => None
+      }
+    }
+
+    private object HasState {
+      def unapply(arg: (ChatState, Msg)): Option[(ChatState, Msg)] =
+        Some(arg)
+    }
 
   }
 

@@ -62,4 +62,13 @@ object DoobieNotificationsRepository extends NotificationsRepository[BotIO] with
       case _ => ().pure[ConnectionIO]
     }
   }
+
+  override def apply(user: User, skip: Int, take: Int): BotIO[List[Notification]] = botIO {
+    sql"SELECT id, id_user, text, dt_to_notificate, is_active FROM notifications WHERE is_active = TRUE AND id_user = ${user.id} ORDER BY dt_to_notificate DESC LIMIT $take OFFSET $skip"
+      .query[OneTime]
+      .stream
+      .compile
+      .toList
+      .map(_.map(_.asInstanceOf[Notification]))
+  }
 }
