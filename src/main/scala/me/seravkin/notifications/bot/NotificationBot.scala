@@ -40,11 +40,15 @@ object NotificationBot {
           case Some((st, user)) =>
             process(user, st, message)
           case _ if !message.isPrivate =>
-            sender.send(message.chatId, "Бот поддерживает только приватные беседы ")
+            sender.send(message.chatId, "Бот поддерживает только приватные беседы ") >>
+            ignore
           case _ =>
-            sender.send(message.chatId, "Пользователь не аутентифицирован для данного сервиса")
+            sender.send(message.chatId, "Пользователь не аутентифицирован для данного сервиса") >>
+            ignore
         }
 
+
+    private[this] val ignore = ().pure[F]
 
     private[this] def authenticate(msg: Msg): F[Option[(ChatState, User)]] = (for(
       name  <- OptionT.fromOption[F](msg.username);
@@ -56,10 +60,12 @@ object NotificationBot {
     private[this] def process(user: User, chatState: ChatState, message: Msg): F[Unit] = (chatState, message) match {
 
       case HasMessage(ContainsText("/help")) =>
-        sender.send(message.chatId, HELP_TEXT)
+        sender.send(message.chatId, HELP_TEXT) >>
+        ignore
 
       case HasMessage(ContainsText("/start")) =>
-        sender.send(message.chatId, HELP_TEXT)
+        sender.send(message.chatId, HELP_TEXT) >>
+        ignore
 
       case HasMessage(ContainsText("/show")) =>
         for (notifications <- notificationsRepository(user);
@@ -69,7 +75,8 @@ object NotificationBot {
 
       case HasMessage(ContainsText(CommandWithArgs("/delete", IsLong(id) :: Nil))) =>
         notificationsRepository.deactivate(id :: Nil) >>
-          sender.send(message.chatId, "Напоминание удалено")
+        sender.send(message.chatId, "Напоминание удалено") >>
+        ignore
 
       case HasMessage(ContainsText(CommandWithArgs("/change", IsLong(id) :: Nil))) =>
         changeNotificationDate(message, id)
@@ -82,15 +89,18 @@ object NotificationBot {
 
       case HasMessage(ContainsText("/in")) =>
         chatStateRepository.set(InControlWaitingForText) >>
-          sender.send(message.chatId, "Введите напоминание:")
+        sender.send(message.chatId, "Введите напоминание:") >>
+        ignore
 
       case (s, ContainsText("/exit")) if s != Nop =>
         chatStateRepository.set(Nop) >>
-          sender.send(message.chatId, "Создание напоминания отменено")
+        sender.send(message.chatId, "Создание напоминания отменено") >>
+        ignore
 
       case (InControlWaitingForText, ContainsText(text)) =>
         chatStateRepository.set(InControlWaitingForTime(message.chatId, text)) >>
-          sender.send(message.chatId, "Введите желаемое время:")
+        sender.send(message.chatId, "Введите желаемое время:") >>
+        ignore
 
       case (s @ InControlWaitingForTime(chatId, text), ContainsText(time)) =>
         for(isSuccess <- tryStore(user, message, text, time);
@@ -99,13 +109,14 @@ object NotificationBot {
 
       case HasMessage(ContainsText(CommandWithQuotedArgs("/in", text :: TailAsText(notification)))) =>
         tryStore(user, message, text, notification) >>
-          ().pure[F]
+        ignore
 
       case HasMessage(ContainsData(HasNotificationId(id))) =>
         changeNotificationDate(message, id.toLong)
 
       case (_, msg) =>
-        sender.send(msg.chatId, "Неизвестная команда")
+        sender.send(msg.chatId, "Неизвестная команда") >>
+        ignore
     }
 
     private[this] def changeNotificationDate(message: Msg, id: Long) = {
@@ -114,7 +125,7 @@ object NotificationBot {
             chatId       <- OptionT.fromOption[F](user.chatId);
             _            <- OptionT.liftF(chatStateRepository.set(InControlWaitingForTime(chatId, notification.text)));
             _            <- OptionT.liftF(sender.send(chatId, "Введите желаемое время для переноса напоминания:")))
-        yield ()).getOrElseF(sender.send(message.chatId, s"Напоминание с id $id не найдено"))
+        yield ()).getOrElseF(sender.send(message.chatId, s"Напоминание с id $id не найдено") >> ignore)
     }
 
     private[this] def tryStore(user: User, message: Msg, text: String, notification: String): F[Boolean] = {

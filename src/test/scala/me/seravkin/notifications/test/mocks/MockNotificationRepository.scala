@@ -16,6 +16,9 @@ object MockNotificationRepository extends NotificationsRepository[State[MockBotS
   override def apply(user: User): State[MockBotState, List[Notification]] =
     State.get.map(_.notifications.filter(n => n.userId == user.id && n.isActive))
 
+  override def apply(user: User, skip: Int, take: Int): State[MockBotState, List[Notification]] =
+    apply(user)
+
   override def +=[T <: Notification](t: T): State[MockBotState, T] =
     State.modify[MockBotState](notifications.modify(_)(_ :+ t)) >> State.pure(t)
 

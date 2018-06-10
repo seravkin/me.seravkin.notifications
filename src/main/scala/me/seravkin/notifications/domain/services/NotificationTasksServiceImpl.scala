@@ -19,7 +19,7 @@ case class NotificationTasksServiceImpl[F[_]: Monad](systemDateTime: SystemDateT
     sender.send(
       notificationTask.chatId,
       notificationTask.text,
-      Button("Перенести", s"notification-${notificationTask.id}") :: Nil)
+      Button("Перенести", s"notification-${notificationTask.id}") :: Nil) >> ().pure[F]
 
   override def sendNotificationsIfNeeded(): F[Unit] = for(
     tasks <- notificationTasksRepository.active(Timestamp.valueOf(systemDateTime.now));
