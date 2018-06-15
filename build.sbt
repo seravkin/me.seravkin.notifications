@@ -8,7 +8,8 @@ scalacOptions += "-Ypartial-unification"
 
 resolvers ++= Seq(
   Resolver.sonatypeRepo("releases"),
-  Resolver.sonatypeRepo("snapshots")
+  Resolver.sonatypeRepo("snapshots"),
+  Resolver.sonatypeRepo("staging")
 )
 
 addCompilerPlugin("org.spire-math" %% "kind-projector" % "0.9.4")

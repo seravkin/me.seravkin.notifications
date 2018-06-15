@@ -7,7 +7,7 @@ trait NotificationsRepository[F[_]] {
 
   def apply(id: Long): F[Option[Notification]]
   def apply(user: User): F[List[Notification]]
-  def apply(user: User, skip: Int, take: Int): F[List[Notification]]
+  def apply(user: User, skip: Int, take: Int): F[Page[Notification]]
 
   def +=[T <: Notification](t: T): F[T]
 

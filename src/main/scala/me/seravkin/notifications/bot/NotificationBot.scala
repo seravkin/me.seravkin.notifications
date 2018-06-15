@@ -6,7 +6,7 @@ import java.time.format.DateTimeFormatter
 import cats._
 import cats.data.OptionT
 import cats.syntax.all._
-import me.seravkin.notifications.domain.Notifications.{Notification, OneTime}
+import me.seravkin.notifications.domain.Notifications.{Notification, OneTime, Recurrent}
 import me.seravkin.notifications.domain._
 import me.seravkin.notifications.domain.algebra.BotAlgebra.BotIO
 import me.seravkin.notifications.domain.parsing.MomentInFutureParser
@@ -15,7 +15,7 @@ import me.seravkin.notifications.infrastructure.messages.{Button, Message, Sende
 import me.seravkin.notifications.infrastructure.messages.Message._
 import me.seravkin.notifications.infrastructure.state.ChatStateRepository
 import me.seravkin.notifications.infrastructure.time.SystemDateTime
-import me.seravkin.notifications.persistance.{NotificationsRepository, UsersRepository}
+import me.seravkin.notifications.persistance.{NotificationsRepository, Page, UsersRepository}
 
 object NotificationBot {
 
@@ -82,10 +82,10 @@ object NotificationBot {
         changeNotificationDate(message, id)
 
       case HasMessage(ContainsText(CommandWithArgs("/list", Nil))) =>
-        for(notifications <- notificationsRepository(user, 0, 3);
-            answer        =  show(notifications);
-            _             <- sender.send(message.chatId, answer))
-          yield ()
+        showPage(user, message, 0, 3)
+
+      case HasMessage(ContainsData(HasPage(id, skip, take))) =>
+        editPage(id.toInt, user, message, skip.toInt, take.toInt)
 
       case HasMessage(ContainsText("/in")) =>
         chatStateRepository.set(InControlWaitingForText) >>
@@ -141,6 +141,26 @@ object NotificationBot {
       }
     }
 
+
+    private[this] def editPage(id: Int, user: User, message: Msg, skip: Int, take: Int): F[Unit] =
+      for(notifications <- notificationsRepository(user, skip, take);
+          answer        =  show(notifications.contents);
+          _             <- sender.send(message.chatId, answer, pageToButtons(id, skip, take, notifications), Some(id)))
+        yield ()
+
+    private[this] def showPage(user: User, message: Msg, skip: Int, take: Int): F[Unit] =
+      for(notifications <- notificationsRepository(user, skip, take);
+          answer        =  show(notifications.contents);
+          msgId         <- sender.send(message.chatId, answer);
+          _             <- sender.send(message.chatId, answer, pageToButtons(msgId, skip, take, notifications), Some(msgId)))
+        yield ()
+
+    private[this] def normalize(i: Int): Int = if(i < 0) 0 else i
+
+    private[this] def pageToButtons[T](id: Int, skip: Int, take: Int, page: Page[T]): List[Button] =
+      (if(page.hasPrevious) List(Button("<-", s"page-$id-${normalize(skip - take)}-$take")) else List.empty) ++
+      (if(page.hasNext) List(Button("->", s"page-$id-${skip + take}-$take")) else List.empty)
+
     private[this] def beautify(time: LocalDateTime) = {
       val formattedTime = time.format(DateTimeFormatter.ofPattern(TIME_FORMAT))
 
@@ -157,9 +177,14 @@ object NotificationBot {
 
     private[this] val HasNotificationId = "notification-([0-9]+)".r
 
+    private[this] val HasPage = "page-([0-9]+)-([0-9]+)-([0-9]+)".r
+
     private[this] def show(notifications: List[Notification]): String =
       "Напоминания:\n" +
-        notifications.map(n => s"Напоминание ${n.id} о " + "\"" + n.text + "\"").foldLeft("") { _ + "\n" + _ }
+        notifications.collect {
+          case n: OneTime => s"Напоминание ${n.id} о " + "\"" + n.text + "\" в " + n.when.toString
+          case n: Recurrent => s"Напоминание ${n.id} о " + "\"" + n.text + "\""
+        }.foldLeft("") { _ + "\n" + _ }
 
     private[this] val DATE_SHORT = "dd.MM"
     private[this] val TIME_FORMAT = "HH:mm"

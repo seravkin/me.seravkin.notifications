@@ -24,7 +24,7 @@ class NotificationBotSpec extends FlatSpec with Matchers {
   "Notifications bot" should "show help when help command is sent" in {
     val dialogue = for(
       _ <- send("/help");
-      _ <- shouldAnswerWith(helpText)
+      _ <- shouldAnswerWith(sentMessage)(hasExpected(helpText))
     ) yield ()
 
     dialogue.run(MockBotState(defaultUser :: Nil)).value
@@ -33,7 +33,7 @@ class NotificationBotSpec extends FlatSpec with Matchers {
   it should "show help on start command too" in {
     val dialogue = for(
       _ <- send("/start");
-      _ <- shouldAnswerWith(helpText)
+      _ <- shouldAnswerWith(sentMessage)(hasExpected(helpText))
     ) yield ()
 
     dialogue.run(MockBotState(defaultUser :: Nil)).value
@@ -42,9 +42,9 @@ class NotificationBotSpec extends FlatSpec with Matchers {
   it should "show active notifications for current user if they are present when show command is sent" in {
     val dialogue = for(
       _ <- send("/show");
-      _ <- shouldAnswerWith("Напоминания:\n\n" +
-        "Напоминание 1 о \"test 1\"\n" +
-        "Напоминание 3 о \"rec test 1\"")
+      _ <- shouldAnswerWith(sentMessage)(hasExpected("Напоминания:\n\n" +
+        "Напоминание 1 о \"test 1\" в 2018-12-01T12:00\n" +
+        "Напоминание 3 о \"rec test 1\""))
     ) yield ()
 
 
@@ -56,7 +56,7 @@ class NotificationBotSpec extends FlatSpec with Matchers {
   it should "deny access for not authorized user" in {
     val dialogue = for(
       _ <- send("/help", User(2, Some(2), "2"));
-      _ <- shouldAnswerWith("Пользователь не аутентифицирован для данного сервиса")
+      _ <- shouldAnswerWith(sentMessage)(hasExpected("Пользователь не аутентифицирован для данного сервиса"))
     ) yield ()
 
     dialogue.run(MockBotState(users = defaultUser :: Nil)).value
@@ -66,7 +66,7 @@ class NotificationBotSpec extends FlatSpec with Matchers {
 
     val dialogue = for(
       _ <- send("/delete 1");
-      _ <- shouldAnswerWith("Напоминание удалено")
+      _ <- shouldAnswerWith(sentMessage)(hasExpected("Напоминание удалено"))
     ) yield ()
 
     val (state, _) = dialogue
@@ -82,11 +82,11 @@ class NotificationBotSpec extends FlatSpec with Matchers {
   it should "parse notification request and store notification if request is correct" in {
     val dialogue = for(
       _  <- send("/in");
-      _  <- shouldAnswerWith("Введите напоминание:");
+      _  <- shouldAnswerWith(sentMessage)(hasExpected("Введите напоминание:"));
       _  <- send("test 1");
-      _  <- shouldAnswerWith("Введите желаемое время:");
+      _  <- shouldAnswerWith(sentMessage)(hasExpected("Введите желаемое время:"));
       _  <- send("завтра в 12:35");
-      _  <- shouldAnswerWith("Напоминание поставлено и будет отправлено 23.08 в 12:35")
+      _  <- shouldAnswerWith(sentMessage)(hasExpected("Напоминание поставлено и будет отправлено 23.08 в 12:35"))
     ) yield ()
 
     val (state, _) = dialogue.run(MockBotState(users = defaultUser :: Nil)).value
@@ -101,13 +101,13 @@ class NotificationBotSpec extends FlatSpec with Matchers {
   it should "try asking user again if request is incorrect and request is multiline" in {
     val dialogue = for(
       _  <- send("/in");
-      _  <- shouldAnswerWith("Введите напоминание:");
+      _  <- shouldAnswerWith(sentMessage)(hasExpected("Введите напоминание:"));
       _  <- send("test 1");
-      _  <- shouldAnswerWith("Введите желаемое время:");
+      _  <- shouldAnswerWith(sentMessage)(hasExpected("Введите желаемое время:"));
       _  <- send("завтра в 42:35");
-      _  <- shouldAnswerWith(_.startsWith("Время в неправильном формате"));
+      _  <- shouldAnswerWithTextThat(_.startsWith("Время в неправильном формате"));
       _  <- send("завтра в 0:32");
-      _  <- shouldAnswerWith("Напоминание поставлено и будет отправлено 23.08 в 00:32")
+      _  <- shouldAnswerWith(sentMessage)(hasExpected("Напоминание поставлено и будет отправлено 23.08 в 00:32"))
     ) yield ()
 
     val (state, _) = dialogue.run(MockBotState(users = defaultUser :: Nil)).value
@@ -122,9 +122,9 @@ class NotificationBotSpec extends FlatSpec with Matchers {
   it should "allow user to exit from dialogue before time input" in {
     val dialogue = for(
       _  <- send("/in");
-      _  <- shouldAnswerWith("Введите напоминание:");
+      _  <- shouldAnswerWith(sentMessage)(hasExpected("Введите напоминание:"));
       _  <- send("/exit");
-      _  <- shouldAnswerWith("Создание напоминания отменено")
+      _  <- shouldAnswerWith(sentMessage)(hasExpected("Создание напоминания отменено"))
     ) yield ()
 
     val (state, _) = dialogue.run(MockBotState(users = defaultUser :: Nil)).value
@@ -135,7 +135,7 @@ class NotificationBotSpec extends FlatSpec with Matchers {
   it should "parse notification request and store notification if request is correct and in one line" in {
     val dialogue = for(
       _  <- send("/in \"test 1\" сегодня в 8:49");
-      _  <- shouldAnswerWith("Напоминание поставлено и будет отправлено в 08:49")
+      _  <- shouldAnswerWith(sentMessage)(hasExpected("Напоминание поставлено и будет отправлено в 08:49"))
     ) yield ()
 
     val (state, _) = dialogue.run(MockBotState(users = defaultUser :: Nil)).value
@@ -147,21 +147,68 @@ class NotificationBotSpec extends FlatSpec with Matchers {
     notification.text should be ("test 1")
   }
 
-  it should "work correctly in longer dialogue with creating showing and deleting notifications" in {
+  it should "show list command without buttons when there are not enough notifications" in {
+    val dialogue = for(
+      _ <- send("/list");
+      _ <- shouldAnswerWith(sentMessage)(hasExpected("Напоминания:\n\n" +
+        "Напоминание 1 о \"test 1\" в 2018-12-01T12:00 \n" +
+        "Напоминание 3 о \"rec test 1\"", Some(Nil)))
+    ) yield ()
+
+
+  }
+
+  it should "not show list buttons when there are exactly three messages" in {
+    val dialogue = for(
+      _ <- send("/in \"test 3\" сегодня в 22:00");
+      _ <- send("/list");
+      _ <- shouldAnswerWith(sentMessage)(predicate(_.contains("test 3"),Some(_ == Nil)))
+    ) yield ()
+
+    dialogue
+      .run(MockBotState(defaultUser :: Nil, notifications = existingNotifications.toList))
+      .value
+  }
+
+  it should "show list command with forward button when there are more messages and updates to show more" in {
+    def hasOnlyOneButton(name: String)(b: List[Button]): Boolean =
+      b.length == 1 && b.head.name == name
+
+
+    val hasRightButton = Some[List[Button] => Boolean](hasOnlyOneButton("->"))
+    val hasLeftButton = Some[List[Button] => Boolean](hasOnlyOneButton("<-"))
+
+    val dialogue = for(
+      _ <- send("/in \"test 3\" сегодня в 22:00");
+      _ <- send("/in \"test 4\" завтра в 12:00");
+      _ <- send("/list");
+      m <- shouldAnswerWith(sentMessage)(predicate(_.contains("test 3"), hasRightButton));
+      _ <- bot(MockMessage(-1, defaultUser, "", Some(m.buttons.head.command)));
+      n <- shouldAnswerWith(editOfMessage(m.id))(predicate(_.contains("test 4"), hasLeftButton));
+      _ <- bot(MockMessage(-1, defaultUser, "", Some(n.buttons.head.command)));
+      _ <- shouldAnswerWith(editOfMessage(m.id))(predicate(_.contains("test 3"), hasRightButton))
+    ) yield ()
+
+    dialogue
+      .run(MockBotState(defaultUser :: Nil, notifications = existingNotifications.toList))
+      .value
+  }
+
+  it should "work correctly in longer dialogue with creating, showing and deleting notifications" in {
     val dialogue = for(
       _ <- send("/in \"test 1\" 22.08 в 23:55");
-      _ <- shouldAnswerWith("Напоминание поставлено и будет отправлено в 23:55");
+      _ <- shouldAnswerWith(sentMessage)(hasExpected("Напоминание поставлено и будет отправлено в 23:55"));
       _ <- send("/in \"test 2\" через 4 дня в это же время");
-      _ <- shouldAnswerWith("Напоминание поставлено и будет отправлено 26.08 в 12:00");
+      _ <- shouldAnswerWith(sentMessage)(hasExpected("Напоминание поставлено и будет отправлено 26.08 в 12:00"));
       _ <- send("/show");
-      _ <- shouldAnswerWith(t => t.contains("test 1") && t.contains("test 2"));
+      _ <- shouldAnswerWithTextThat(t => t.contains("test 1") && t.contains("test 2"));
       _ <- send("/in");
       _ <- send("test 3");
       _ <- send("послезавтра в 9:55");
       _ <- send("/delete 1");
-      _ <- shouldAnswerWith("Напоминание удалено");
+      _ <- shouldAnswerWith(sentMessage)(hasExpected("Напоминание удалено"));
       _ <- send("/show");
-      _ <- shouldAnswerWith(t => t.contains("test 2") && t.contains("test 3"))
+      _ <- shouldAnswerWithTextThat(t => t.contains("test 2") && t.contains("test 3"))
     ) yield ()
 
     val (state, _) = dialogue.run(MockBotState(users = defaultUser :: Nil)).value
@@ -172,22 +219,22 @@ class NotificationBotSpec extends FlatSpec with Matchers {
   it should "change notification date if requested" in {
     val dialogue = for(
       _ <- send("/in \"test 1\" 22.08 в 23:55");
-      _ <- shouldAnswerWith("Напоминание поставлено и будет отправлено в 23:55");
+      _ <- shouldAnswerWith(sentMessage)(hasExpected("Напоминание поставлено и будет отправлено в 23:55"));
       _ <- send("/change 0");
-      _ <- shouldAnswerWith("Введите желаемое время для переноса напоминания:");
+      _ <- shouldAnswerWith(sentMessage)(hasExpected("Введите желаемое время для переноса напоминания:"));
       _ <- send("22.08 в 23:57");
-      _ <- shouldAnswerWith("Напоминание поставлено и будет отправлено в 23:57")
+      _ <- shouldAnswerWith(sentMessage)(hasExpected("Напоминание поставлено и будет отправлено в 23:57"))
     ) yield ()
 
     dialogue.run(MockBotState(users = defaultUser :: Nil)).value
   }
 
-  it should "warn if notification id does not exists" in {
+  it should "warn if notification id does not exist" in {
     val dialogue = for(
       _ <- send("/in \"test 1\" 22.08 в 23:55");
-      _ <- shouldAnswerWith("Напоминание поставлено и будет отправлено в 23:55");
+      _ <- shouldAnswerWith(sentMessage)(hasExpected("Напоминание поставлено и будет отправлено в 23:55"));
       _ <- send("/change 5");
-      _ <- shouldAnswerWith("Напоминание с id 5 не найдено")
+      _ <- shouldAnswerWith(sentMessage)(hasExpected("Напоминание с id 5 не найдено"))
     ) yield ()
 
     dialogue.run(MockBotState(users = defaultUser :: Nil)).value
@@ -195,19 +242,34 @@ class NotificationBotSpec extends FlatSpec with Matchers {
 
 
   private[this] def send(text: String, user: User = defaultUser) =
-    bot(MockMessage(user, text))
+    bot(MockMessage(-1, user, text))
 
-  private[this] def shouldAnswerWith(text: String) = State.get[MockBotState] map { state =>
-    val lastMessage = state.sentMessages.last
+  private[this] def editOfMessage(id: Int)(list: List[MockMessage]): MockMessage = {
+    list.exists(_.id == id) should be (true)
 
+    list.find(_.id == id).get
+  }
+
+  private[this] def sentMessage(list: List[MockMessage]): MockMessage = {
+    list.last
+  }
+
+  private[this] def shouldAnswerWith(f: List[MockMessage] => MockMessage)(assert: MockMessage => Assertion) = State.get[MockBotState] map { state =>
+    val msg = f(state.sentMessages)
+
+    assert(msg)
+
+    msg
+  }
+
+  private[this] def predicate(f: String => Boolean, button: Option[List[Button] => Boolean] = None)(msg: MockMessage): Assertion =
+    (f(msg.text) && (button.isEmpty || button.get(msg.buttons))) should be (true)
+
+  private[this] def hasExpected(text: String, button: Option[List[Button]] = None)(lastMessage: MockMessage): Assertion =
     lastMessage.text should be (text)
-  }
 
-  private[this] def shouldAnswerWith(f: String => Boolean) = State.get[MockBotState] map { state =>
-    val lastMessage = state.sentMessages.last
-
-    f(lastMessage.text) should be (true)
-  }
+  private[this] def shouldAnswerWithTextThat(f: String => Boolean) =
+    shouldAnswerWith(sentMessage)(predicate(f))
 
   private[this] val defaultUser = User(1, Some(1), "test")
   private[this] val defaultUserId = defaultUser.id
@@ -220,8 +282,8 @@ class NotificationBotSpec extends FlatSpec with Matchers {
     "/change <id> - Изменяет дату и время на напоминании с указанным id"
 
   private[this] val existingNotifications =  Vector(
-    OneTime(1, defaultUserId, "test 1", LocalDateTime.now(), true),
-    OneTime(2, defaultUserId, "test 1 na", LocalDateTime.now(), false),
+    OneTime(1, defaultUserId, "test 1", LocalDateTime.of(2018,12,1,12,0), true),
+    OneTime(2, defaultUserId, "test 1 na", LocalDateTime.of(2018,12,1,12,0), false),
     Recurrent(3, defaultUserId, "rec test 1", LocalDateTime.now(), LocalDateTime.now(), true),
     Recurrent(4, defaultUserId, "rec test 1 - na", LocalDateTime.now(), LocalDateTime.now(), false),
     Recurrent(5, defaultUserId + 1, "asdasd", LocalDateTime.now(), LocalDateTime.now(), true)

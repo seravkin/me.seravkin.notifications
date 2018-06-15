@@ -9,7 +9,7 @@ import cats.implicits._
 import me.seravkin.notifications.domain.Notifications.{Notification, OneTime}
 import me.seravkin.notifications.domain.algebra.BotAlgebra.BotIO
 import me.seravkin.notifications.domain.{Notifications, User}
-import me.seravkin.notifications.persistance.{NotificationsRepository, botio}
+import me.seravkin.notifications.persistance.{NotificationsRepository, Page, botio}
 
 
 object DoobieNotificationsRepository extends NotificationsRepository[BotIO] with BotIORepository {
@@ -63,12 +63,23 @@ object DoobieNotificationsRepository extends NotificationsRepository[BotIO] with
     }
   }
 
-  override def apply(user: User, skip: Int, take: Int): BotIO[List[Notification]] = botIO {
+  private[this] def activeNotificationsCount(user: User): BotIO[Int] = botIO {
+    sql"SELECT count(id) from notifications where is_active = TRUE AND id_user = ${user.id}"
+      .query[Int]
+      .unique
+  }
+
+  private[this] def pageOfNotifications(user: User, skip: Int, take: Int): BotIO[List[OneTime]] = botIO {
     sql"SELECT id, id_user, text, dt_to_notificate, is_active FROM notifications WHERE is_active = TRUE AND id_user = ${user.id} ORDER BY dt_to_notificate DESC LIMIT $take OFFSET $skip"
       .query[OneTime]
       .stream
       .compile
       .toList
-      .map(_.map(_.asInstanceOf[Notification]))
   }
+
+  override def apply(user: User, skip: Int, take: Int): BotIO[Page[Notification]] = for(
+    count   <- activeNotificationsCount(user);
+    entries <- pageOfNotifications(user, skip, take)
+  ) yield Page(entries, skip != 0, count > skip + entries.length)
+
 }

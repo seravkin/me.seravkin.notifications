@@ -5,7 +5,7 @@ import cats._
 import cats.syntax.all._
 import me.seravkin.notifications.domain.Notifications.{Notification, OneTime, Recurrent}
 import me.seravkin.notifications.domain.User
-import me.seravkin.notifications.persistance.NotificationsRepository
+import me.seravkin.notifications.persistance.{NotificationsRepository, Page}
 import me.seravkin.notifications.test.mocks.MockBotState._
 
 object MockNotificationRepository extends NotificationsRepository[State[MockBotState, ?]] {
@@ -16,8 +16,10 @@ object MockNotificationRepository extends NotificationsRepository[State[MockBotS
   override def apply(user: User): State[MockBotState, List[Notification]] =
     State.get.map(_.notifications.filter(n => n.userId == user.id && n.isActive))
 
-  override def apply(user: User, skip: Int, take: Int): State[MockBotState, List[Notification]] =
-    apply(user)
+  override def apply(user: User, skip: Int, take: Int): State[MockBotState, Page[Notification]] = for(
+    count   <- apply(user).map(_.length);
+    entries <- apply(user).map(_.slice(skip, skip + take))
+  ) yield Page(entries, skip != 0, count > skip + entries.length)
 
   override def +=[T <: Notification](t: T): State[MockBotState, T] =
     State.modify[MockBotState](notifications.modify(_)(_ :+ t)) >> State.pure(t)

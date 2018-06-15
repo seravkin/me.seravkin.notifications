@@ -3,7 +3,7 @@ package me.seravkin.notifications.test.mocks
 import me.seravkin.notifications.domain.User
 import me.seravkin.notifications.infrastructure.messages.{Button, Message}
 
-final case class MockMessage(user: User, text: String, data: Option[String] = None, buttons: List[Button] = Nil)
+final case class MockMessage(id: Int, user: User, text: String, data: Option[String] = None, buttons: List[Button] = Nil)
 
 object MockMessage {
   implicit val messageInstance: Message[MockMessage] = new Message[MockMessage] {
