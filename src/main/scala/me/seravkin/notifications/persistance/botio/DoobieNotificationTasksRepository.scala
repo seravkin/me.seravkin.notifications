@@ -15,9 +15,8 @@ object DoobieNotificationTasksRepository extends NotificationTasksRepository[Bot
     sql"""SELECT n.id, u.chat_id, n.text FROM notifications n
           JOIN users u ON n.id_user = u.id
           WHERE n.is_active = TRUE AND $now > n.dt_to_notificate
-       """.query[NotificationTask]
-      .stream
-      .compile
+       """
+      .read[NotificationTask]
       .toList
   }
 }

@@ -22,9 +22,7 @@ object DoobieNotificationsRepository extends NotificationsRepository[BotIO] with
 
   override def apply(id: Long): BotIO[Option[Notifications.Notification]] = botIO {
     sql"SELECT id, id_user, text, dt_to_notificate, is_active FROM notifications WHERE id = $id"
-      .query[OneTime]
-      .stream
-      .compile
+      .read[OneTime]
       .last
       .map(_.map(_.asInstanceOf[Notification]))
   }
@@ -32,9 +30,7 @@ object DoobieNotificationsRepository extends NotificationsRepository[BotIO] with
 
   override def apply(user: User): BotIO[List[Notifications.Notification]] = botIO {
     sql"SELECT id, id_user, text, dt_to_notificate, is_active FROM notifications WHERE is_active = TRUE AND id_user = ${user.id}"
-      .query[OneTime]
-      .stream
-      .compile
+      .read[OneTime]
       .toList
       .map(_.map(_.asInstanceOf[Notification]))
   }
@@ -71,9 +67,7 @@ object DoobieNotificationsRepository extends NotificationsRepository[BotIO] with
 
   private[this] def pageOfNotifications(user: User, skip: Int, take: Int): BotIO[List[OneTime]] = botIO {
     sql"SELECT id, id_user, text, dt_to_notificate, is_active FROM notifications WHERE is_active = TRUE AND id_user = ${user.id} ORDER BY dt_to_notificate DESC LIMIT $take OFFSET $skip"
-      .query[OneTime]
-      .stream
-      .compile
+      .read[OneTime]
       .toList
   }
 

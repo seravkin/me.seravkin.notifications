@@ -10,17 +10,13 @@ import me.seravkin.notifications.persistance.UsersRepository
 object DoobieUsersRepository extends UsersRepository[BotIO] with BotIORepository {
   override def apply(username: String): BotIO[Option[User]] = botIO {
     sql"SELECT id, chat_id, telegram_name FROM users WHERE telegram_name = $username"
-      .query[User]
-      .stream
-      .compile
+      .read[User]
       .last
   }
 
   override def apply(id: Long): BotIO[Option[User]] = botIO {
     sql"SELECT id, chat_id, telegram_name FROM users WHERE id = $id"
-      .query[User]
-      .stream
-      .compile
+      .read[User]
       .last
   }
 
