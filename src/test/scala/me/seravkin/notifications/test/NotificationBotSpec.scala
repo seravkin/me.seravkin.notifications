@@ -162,7 +162,7 @@ class NotificationBotSpec extends FlatSpec with Matchers {
     val dialogue = for(
       _ <- send("/in \"test 3\" сегодня в 22:00");
       _ <- send("/list");
-      _ <- shouldAnswerWith(sentMessage)(predicate(_.contains("test 3"),Some(_ == Nil)))
+      _ <- shouldAnswerWith(sentMessage)(predicate(_.contains("test 3"),Some(l => !l.exists(_.name.contains("-")))))
     ) yield ()
 
     dialogue
@@ -172,7 +172,7 @@ class NotificationBotSpec extends FlatSpec with Matchers {
 
   it should "show list command with forward button when there are more messages and updates to show more" in {
     def hasOnlyOneButton(name: String)(b: List[Button]): Boolean =
-      b.length == 1 && b.head.name == name
+      b.exists(_.name == name)
 
 
     val hasRightButton = Some[List[Button] => Boolean](hasOnlyOneButton("->"))
@@ -183,10 +183,88 @@ class NotificationBotSpec extends FlatSpec with Matchers {
       _ <- send("/in \"test 4\" завтра в 12:00");
       _ <- send("/list");
       m <- shouldAnswerWith(sentMessage)(predicate(_.contains("test 3"), hasRightButton));
-      _ <- bot(MockMessage(-1, defaultUser, "", Some(m.buttons.head.command)));
+      _ <- bot(MockMessage(-1, defaultUser, "", m.buttons.find(_.name == "->").map(_.command)));
       n <- shouldAnswerWith(editOfMessage(m.id))(predicate(_.contains("test 4"), hasLeftButton));
-      _ <- bot(MockMessage(-1, defaultUser, "", Some(n.buttons.head.command)));
+      _ <- bot(MockMessage(-1, defaultUser, "", n.buttons.find(_.name == "<-").map(_.command)));
       _ <- shouldAnswerWith(editOfMessage(m.id))(predicate(_.contains("test 3"), hasRightButton))
+    ) yield ()
+
+    dialogue
+      .run(MockBotState(defaultUser :: Nil, notifications = existingNotifications.toList))
+      .value
+  }
+
+  it should "show list command with buttons that open message edit menu" in {
+    def hasButtonsWithNames(names: String*)(buttons: List[Button]): Boolean =
+      buttons.map(_.name) == names.toList
+
+
+    val hasNavigationButtons = Some[List[Button] => Boolean](hasButtonsWithNames("1","2","3", "->"))
+    val hasEditButtons = Some[List[Button] => Boolean](hasButtonsWithNames("Назад", "Перенести", "Удалить"))
+
+    val dialogue = for(
+      _ <- send("/in \"test 3\" сегодня в 22:00");
+      _ <- send("/in \"test 4\" завтра в 12:00");
+      _ <- send("/in \"test 5\" завтра в 12:00");
+      _ <- send("/list");
+      m <- shouldAnswerWith(sentMessage)(predicate(_.contains("test 3"), hasNavigationButtons));
+      _ <- bot(MockMessage(-1, defaultUser, "", m.buttons.find(_.name == "1").map(_.command)));
+      n <- shouldAnswerWith(editOfMessage(m.id))(predicate(_.contains("Редактирование: test 1"), hasEditButtons));
+      _ <- bot(MockMessage(-1, defaultUser, "", n.buttons.find(_.name == "Назад").map(_.command)));
+      _ <- shouldAnswerWith(editOfMessage(m.id))(predicate(_.contains("test 3"), hasNavigationButtons))
+    ) yield ()
+
+    dialogue
+      .run(MockBotState(defaultUser :: Nil, notifications = existingNotifications.toList))
+      .value
+  }
+
+  it should "show edit menu and allow notification date change" in {
+    def hasButtonsWithNames(names: String*)(buttons: List[Button]): Boolean =
+      buttons.map(_.name) == names.toList
+
+
+    val hasNavigationButtons = Some[List[Button] => Boolean](hasButtonsWithNames("1","2","3", "->"))
+    val hasEditButtons = Some[List[Button] => Boolean](hasButtonsWithNames("Назад", "Перенести", "Удалить"))
+
+    val dialogue = for(
+      _ <- send("/in \"test 3\" сегодня в 22:00");
+      _ <- send("/in \"test 4\" завтра в 12:00");
+      _ <- send("/in \"test 5\" завтра в 12:00");
+      _ <- send("/list");
+      m <- shouldAnswerWith(sentMessage)(predicate(_.contains("test 3"), hasNavigationButtons));
+      _ <- bot(MockMessage(-1, defaultUser, "", m.buttons.find(_.name == "1").map(_.command)));
+      n <- shouldAnswerWith(editOfMessage(m.id))(predicate(_.contains("Редактирование: test 1"), hasEditButtons));
+      _ <- bot(MockMessage(-1, defaultUser, "", n.buttons.find(_.name == "Перенести").map(_.command)));
+      _ <- shouldAnswerWith(sentMessage)(predicate(_.contains("Введите желаемое время для переноса напоминания:")))
+    ) yield ()
+
+    dialogue
+      .run(MockBotState(defaultUser :: Nil, notifications = existingNotifications.toList))
+      .value
+  }
+
+  it should "show edit menu and allow notification delete" in {
+    def hasButtonsWithNames(names: String*)(buttons: List[Button]): Boolean =
+      buttons.map(_.name) == names.toList
+
+
+    val hasNavigationButtons = Some[List[Button] => Boolean](hasButtonsWithNames("1","2","3", "->"))
+    val hasEditButtons = Some[List[Button] => Boolean](hasButtonsWithNames("Назад", "Перенести", "Удалить"))
+
+    val dialogue = for(
+      _ <- send("/in \"test 3\" сегодня в 22:00");
+      _ <- send("/in \"test 4\" завтра в 12:00");
+      _ <- send("/in \"test 5\" завтра в 12:00");
+      _ <- send("/list");
+      m <- shouldAnswerWith(sentMessage)(predicate(_.contains("test 3"), hasNavigationButtons));
+      _ <- bot(MockMessage(-1, defaultUser, "", m.buttons.find(_.name == "1").map(_.command)));
+      n <- shouldAnswerWith(editOfMessage(m.id))(predicate(_.contains("Редактирование: test 1"), hasEditButtons));
+      _ <- bot(MockMessage(-1, defaultUser, "", n.buttons.find(_.name == "Удалить").map(_.command)));
+      s <- State.get[MockBotState];
+      _ =  println(s);
+      _ <- shouldAnswerWith(editOfMessage(m.id))(predicate(x => x != "test 1", hasNavigationButtons))
+
     ) yield ()
 
     dialogue

@@ -16,6 +16,7 @@ import me.seravkin.notifications.infrastructure.messages.Message._
 import me.seravkin.notifications.infrastructure.state.ChatStateRepository
 import me.seravkin.notifications.infrastructure.time.SystemDateTime
 import me.seravkin.notifications.persistance.{NotificationsRepository, Page, UsersRepository}
+import me.seravkin.notifications.bot.commands._
 
 object NotificationBot {
 
@@ -84,8 +85,8 @@ object NotificationBot {
       case HasMessage(ContainsText(CommandWithArgs("/list", Nil))) =>
         showPage(user, message, 0, 3)
 
-      case HasMessage(ContainsData(HasPage(id, skip, take))) =>
-        editPage(id.toInt, user, message, skip.toInt, take.toInt)
+      case HasMessage(ContainsData(ChangePage(id, skip, take))) =>
+        editPage(id, user, message, skip, take)
 
       case HasMessage(ContainsText("/in")) =>
         chatStateRepository.set(InControlWaitingForText) >>
@@ -107,12 +108,30 @@ object NotificationBot {
             _         <- chatStateRepository.set(if(isSuccess) Nop else s))
           yield ()
 
+      case HasMessage(ContainsData(OpenNotificationMenu(msgId, notificationId, commandToReturn))) =>
+        (for(notification <- OptionT(notificationsRepository(notificationId));
+             _            <- OptionT.liftF(sender.send(message.chatId, s"Редактирование: ${notification.text}",
+              Button("Назад", commandToReturn) ::
+              Button("Перенести", ChangeNotificationTimeAndMenu(msgId, notificationId, commandToReturn)) ::
+              Button("Удалить", DeleteNotification(msgId, notificationId, commandToReturn)) :: Nil, Some(msgId))))
+          yield ()).getOrElseF(ignore)
+
       case HasMessage(ContainsText(CommandWithQuotedArgs("/in", text :: TailAsText(notification)))) =>
         tryStore(user, message, text, notification) >>
         ignore
 
-      case HasMessage(ContainsData(HasNotificationId(id))) =>
-        changeNotificationDate(message, id.toLong)
+      case HasMessage(ContainsData(DeleteNotification(msgId, notificationId, ChangePage(_, skip, take)))) =>
+        for(_ <- notificationsRepository.deactivate(notificationId :: Nil);
+            _ <- editPage(msgId, user, message, skip, take))
+          yield ()
+
+      case HasMessage(ContainsData(ChangeNotificationTimeAndMenu(msgId, notificationId, _))) =>
+        for(_ <- notificationsRepository.deactivate(notificationId :: Nil);
+            _ <- changeNotificationDate(message, notificationId))
+          yield ()
+
+      case HasMessage(ContainsData(ChangeNotificationTime(id))) =>
+        changeNotificationDate(message, id)
 
       case (_, msg) =>
         sender.send(msg.chatId, "Неизвестная команда") >>
@@ -157,9 +176,11 @@ object NotificationBot {
 
     private[this] def normalize(i: Int): Int = if(i < 0) 0 else i
 
-    private[this] def pageToButtons[T](id: Int, skip: Int, take: Int, page: Page[T]): List[Button] =
-      (if(page.hasPrevious) List(Button("<-", s"page-$id-${normalize(skip - take)}-$take")) else List.empty) ++
-      (if(page.hasNext) List(Button("->", s"page-$id-${skip + take}-$take")) else List.empty)
+    private[this] def pageToButtons[T <: Notification](id: Int, skip: Int, take: Int, page: Page[T]): List[Button] =
+      (if(page.hasPrevious) List(Button("<-", ChangePage(id,normalize(skip - take), take))) else List.empty) ++
+      page.contents.zipWithIndex.map { case (x,i) => Button((i + 1).toString, OpenNotificationMenu(id,
+        x.id, ChangePage(id, skip, take))) } ++
+      (if(page.hasNext) List(Button("->", ChangePage(id, skip + take, take))) else List.empty)
 
     private[this] def beautify(time: LocalDateTime) = {
       val formattedTime = time.format(DateTimeFormatter.ofPattern(TIME_FORMAT))
@@ -175,9 +196,6 @@ object NotificationBot {
       dateWhiteSpace + "в " + formattedTime
     }
 
-    private[this] val HasNotificationId = "notification-([0-9]+)".r
-
-    private[this] val HasPage = "page-([0-9]+)-([0-9]+)-([0-9]+)".r
 
     private[this] def show(notifications: List[Notification]): String =
       "Напоминания:\n" +
@@ -193,6 +211,7 @@ object NotificationBot {
       "/show - Показывает активные напоминания\n" +
       "/delete <id> - Удаляет напоминания с указанным id\n" +
       "/change <id> - Изменяет дату и время на напоминании с указанным id"
+
 
     private object HasMessage {
       def unapply(arg: (ChatState, Msg)): Option[Msg] = arg match {

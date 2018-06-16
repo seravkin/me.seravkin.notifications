@@ -5,6 +5,7 @@ import java.sql.Timestamp
 import cats._
 import cats.instances.list._
 import cats.syntax.all._
+import me.seravkin.notifications.bot.commands.ChangeNotificationTime
 import me.seravkin.notifications.domain.Notifications.NotificationTask
 import me.seravkin.notifications.infrastructure.messages.{Button, Sender}
 import me.seravkin.notifications.infrastructure.time.SystemDateTime
@@ -19,7 +20,7 @@ case class NotificationTasksServiceImpl[F[_]: Monad](systemDateTime: SystemDateT
     sender.send(
       notificationTask.chatId,
       notificationTask.text,
-      Button("Перенести", s"notification-${notificationTask.id}") :: Nil) >> ().pure[F]
+      Button("Перенести", ChangeNotificationTime(notificationTask.id)) :: Nil) >> ().pure[F]
 
   override def sendNotificationsIfNeeded(): F[Unit] = for(
     tasks <- notificationTasksRepository.active(Timestamp.valueOf(systemDateTime.now));

@@ -34,7 +34,7 @@ object Configuration {
     val config = ConfigFactory.parseFile(new File(configPath))
 
     NotificationConfiguration(
-      config.getString("notifications.bot.test.key"),
+      config.getString("notifications.bot.key"),
       config.getInt("notifications.bot.jobs.interval"),
       HikariConfiguration(
         config.getString("notifications.database.url"),
