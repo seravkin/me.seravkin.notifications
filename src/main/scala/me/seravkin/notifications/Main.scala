@@ -15,7 +15,7 @@ import me.seravkin.notifications.bot.NotificationBot.{ChatState, NotificationBot
 import me.seravkin.notifications.domain.algebra.BotAlgebra.BotIO
 import me.seravkin.notifications.domain.parsing.CombinatorMomentInFutureParser
 import me.seravkin.notifications.infrastructure.interpreters.BotIOInterpreter
-import me.seravkin.notifications.infrastructure.{Bot, messages}
+import me.seravkin.notifications.infrastructure.{Bot, BotIORunner, messages}
 import me.seravkin.notifications.infrastructure.messages.BotIOSender
 import me.seravkin.notifications.infrastructure.state.BotIOChatStateRepository
 import me.seravkin.notifications.infrastructure.time.ActualSystemDateTime
@@ -48,36 +48,15 @@ object Main extends App with TelegramBot with Polling {
     DoobieNotificationsRepository,
     BotIOSender)
 
-  private[this] val trieMap = new TrieMap[Long, ChatState]()
   private[this] val messageBot = botFor[Message]
   private[this] val callbackQueryBot = botFor[CallbackQuery]
+
   private[this] lazy val config = Configuration.load()
-  private[this] val ds = new HikariDataSource(config.hikariConfig.toHikariConfig)
 
-  private[this] def interpret(botIO: BotIO[Unit])(chatId: Option[Long]) = {
-    val connection: Connection = ds.getConnection
-
-    connection.setAutoCommit(false)
-
-    val transactor = Transactor(
-      connection,
-      Task.pure[Connection](_),
-      KleisliInterpreter[Task].ConnectionInterpreter,
-      Strategy.default.copy(always = unit, after = unit, oops = unit))
-
-    botIO.foldMap(new BotIOInterpreter(chatId, trieMap, request, transactor)).runOnComplete {
-      case Success(_) =>
-        connection.commit()
-        connection.close()
-      case Failure(exception) =>
-        exception.printStackTrace()
-        connection.rollback()
-        connection.close()
-    }
-  }
+  private[this] val runner = new BotIORunner(config, request)
 
   private[this] def interpret[T: infrastructure.messages.Message](bot: Bot[T, BotIO])(message: T, chatId: Long): Unit =
-    interpret(bot(message))(Some(chatId))
+    runner.run(bot(message))(Some(chatId))
 
   def token = config.telegramApiKey
 
@@ -91,7 +70,7 @@ object Main extends App with TelegramBot with Polling {
   }
 
   global.scheduleWithFixedDelay(config.secondsForScheduler, config.secondsForScheduler, TimeUnit.SECONDS, () => {
-    interpret(service.sendNotificationsIfNeeded())(None)
+    runner.run(service.sendNotificationsIfNeeded())(None)
   })
 
   this.run()
