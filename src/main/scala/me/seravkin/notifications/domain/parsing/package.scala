@@ -115,6 +115,11 @@ package object parsing {
       now.withHour(0).withMinute(0).plusDays(days)
   }
 
+  final case class FormattedDateWithYear(day: Int, month: Int, year: Int) extends MomentInFuture with Date {
+    override def toExecutionTime(now: LocalDateTime): LocalDateTime =
+      LocalDateTime.of(year, month, day, 0, 0)
+  }
+
   final case class FormattedDate(day: Int, month: Int) extends MomentInFuture with Date {
     override def toExecutionTime(now: LocalDateTime): LocalDateTime =
       LocalDateTime.of(now.getYear, month, day, 0, 0)

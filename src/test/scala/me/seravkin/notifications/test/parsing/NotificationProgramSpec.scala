@@ -23,6 +23,11 @@ class NotificationProgramSpec  extends FlatSpec with Matchers  {
       now.withDayOfMonth(22).withMonth(7).withHour(17).withMinute(34))
   }
 
+  it should "notify in given date with year and time" in {
+    assertExecutionDateAndNotification(FromFormattedDate(FormattedDateWithYear(22, 7, 2017), FormattedTime(17, 34)),
+      now.withYear(2017).withDayOfMonth(22).withMonth(7).withHour(17).withMinute(34))
+  }
+
   it should "notify in days and given time" in {
     assertExecutionDateAndNotification(FromFormattedDate(InDays(0), FormattedTime(13, 45)),
       now.withHour(13).withMinute(45))

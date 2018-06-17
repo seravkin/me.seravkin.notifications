@@ -20,6 +20,6 @@ trait DateParsers extends RegexParsers { this: CommonParsers with TimeConstants 
 
   def dayOfWeekInWeeks: Parser[Date] = ("во" | "в") ~ daysOfWeek ~ (inWeek | inWeeks).? ^^ { case _ ~ dayOf ~ weeks => InNextDayOfWeek(weeks.getOrElse(0), dayOf) }
 
-  def date: Parser[Date] = formattedDate | today | tomorrow | dayAfterTomorrow | inDays | inWeeksAsDays | dayOfWeekInWeeks
+  def date: Parser[Date] = formattedDateWithYear | formattedDate | today | tomorrow | dayAfterTomorrow | inDays | inWeeksAsDays | dayOfWeekInWeeks
 
 }

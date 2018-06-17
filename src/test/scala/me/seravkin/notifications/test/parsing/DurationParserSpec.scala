@@ -23,6 +23,10 @@ class DurationParserSpec extends FlatSpec with Matchers {
     assertParsedTime(FromFormattedDate(FormattedDate(22, 7), FormattedTime(12, 0)))("22.07 в 12:00")
   }
 
+  it should "parse date with full" in {
+    assertParsedTime(FromFormattedDate(FormattedDateWithYear(22, 7, 2017), FormattedTime(12, 0)))("22.07.2017 в 12:00")
+  }
+
   it should "parse today date and time" in {
     assertParsedTime(FromFormattedDate(InDays(0), FormattedTime(12, 45)))("сегодня в 12:45")
   }
