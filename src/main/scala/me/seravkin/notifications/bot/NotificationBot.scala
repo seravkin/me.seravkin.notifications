@@ -25,6 +25,7 @@ object NotificationBot {
   final case object Nop extends ChatState
   final case object InControlWaitingForText extends ChatState
   final case class  InControlWaitingForTime(chatId: Long, text: String) extends ChatState
+  final case class  InControlWaitingForConfirmation(chatId: Long, text: String, time: String) extends ChatState
 
 
   final case class NotificationBotBuilder[Msg: Message, F[_]: Monad](
@@ -104,9 +105,12 @@ object NotificationBot {
         ignore
 
       case (s @ InControlWaitingForTime(chatId, text), ContainsText(time)) =>
-        for(isSuccess <- tryStore(user, message, text, time);
-            _         <- chatStateRepository.set(if(isSuccess) Nop else s))
-          yield ()
+        tryStore(user, message, text, time);
+
+      case (InControlWaitingForConfirmation(chatId, text, time), ContainsData(SelectNotificationDate(day, month))) =>
+        // Можем это делать, т.к. в прошлый раз уже распарсили
+        val Right(moment) = momentInFutureParser.parseMomentInFuture(time)
+        storeAndReply(user, message, text, moment.toExecutionTime(systemDateTime.now.withMonth(month).withDayOfMonth(day)))
 
       case HasMessage(ContainsData(OpenNotificationMenu(msgId, notificationId, commandToReturn))) =>
         (for(notification <- OptionT(notificationsRepository(notificationId));
@@ -117,8 +121,7 @@ object NotificationBot {
           yield ()).getOrElseF(ignore)
 
       case HasMessage(ContainsText(CommandWithQuotedArgs("/in", text :: TailAsText(notification)))) =>
-        tryStore(user, message, text, notification) >>
-        ignore
+        tryStore(user, message, text, notification)
 
       case HasMessage(ContainsData(DeleteNotification(msgId, notificationId, ChangePage(_, skip, take)))) =>
         for(_ <- notificationsRepository.deactivate(notificationId :: Nil);
@@ -147,19 +150,40 @@ object NotificationBot {
         yield ()).getOrElseF(sender.send(message.chatId, s"Напоминание с id $id не найдено") >> ignore)
     }
 
-    private[this] def tryStore(user: User, message: Msg, text: String, notification: String): F[Boolean] = {
+
+    private[this] def tryStore(user: User, message: Msg, text: String, notification: String): F[Unit] = {
       momentInFutureParser.parseMomentInFuture(notification) match {
+        case Right(momentInFuture) if momentInFuture.isRelativeToDate && isUncertainTime  =>
+          val today = momentInFuture.toExecutionTime(systemDateTime.now)
+          val tomorrow = momentInFuture.toExecutionTime(systemDateTime.now.plusDays(1))
+
+          for(_ <- sender.send(message.chatId, "Какая дата точно имелась в виду:", dateButton(today) :: dateButton(tomorrow) :: Nil);
+              _ <- chatStateRepository.set(InControlWaitingForConfirmation(message.chatId, text, notification)))
+            yield ()
         case Right(momentInFuture) =>
           val time = momentInFuture.toExecutionTime(systemDateTime.now)
-          for(_ <- notificationsRepository += OneTime(0, user.id, text, time, isActive = true);
-              _ <- sender.send(message.chatId, s"Напоминание поставлено и будет отправлено ${beautify(time)}"))
-            yield true
+
+          storeAndReply(user, message, text, time)
         case Left(error) =>
           for(_ <- sender.send(message.chatId, s"Время в неправильном формате. Ошибка: $error"))
-            yield false
+            yield ()
       }
     }
 
+    private[this] def dateButton(day: LocalDateTime) = Button(
+      f"${day.getDayOfMonth}.${day.getMonthValue}%02d",
+      SelectNotificationDate(day.getDayOfMonth, day.getMonthValue)
+    )
+
+    private[this] def isUncertainTime =
+      systemDateTime.now.getHour >= 23 || systemDateTime.now.getHour <= 3
+
+    private[this] def storeAndReply(user: User, message: Msg, text: String, time: LocalDateTime): F[Unit] = {
+      for (_ <- notificationsRepository += OneTime(0, user.id, text, time, isActive = true);
+           _ <- sender.send(message.chatId, s"Напоминание поставлено и будет отправлено ${beautify(time)}");
+           _ <- chatStateRepository.set(Nop))
+        yield ()
+    }
 
     private[this] def editPage(id: Int, user: User, message: Msg, skip: Int, take: Int): F[Unit] =
       for(notifications <- notificationsRepository(user, skip, take);

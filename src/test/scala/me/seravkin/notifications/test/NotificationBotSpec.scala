@@ -97,6 +97,36 @@ class NotificationBotSpec extends FlatSpec with Matchers {
 
     notification.text should be ("test 1")
   }
+  
+  it should "ask exact date if notification was requested before 00:00" in {
+    val bot = NotificationBotBuilder[MockMessage, State[MockBotState, ?]](
+      MockUsersRepository(defaultUser),
+      MockChatStateRepository,
+      MockSender,
+      CombinatorMomentInFutureParser,
+      MockNotificationRepository,
+      MockDateTime(LocalDateTime.of(2018,5,17,23,55))).build
+
+    def sendAtNight(text: String) =
+      bot(MockMessage(-1, defaultUser, text))
+
+    val dialogue = for(
+      _ <- sendAtNight("/in");
+      _ <- sendAtNight("test wtf");
+      _ <- sendAtNight("завтра в 12:00");
+      m <- shouldAnswerWith(sentMessage)(predicate(_ == "Какая дата точно имелась в виду:",
+                                         hasButtonsWithNames("18.05", "19.05")));
+      _ <- bot(MockMessage(-1, defaultUser, "", Some(m.buttons.last.command)))
+    ) yield ()
+
+    val (state, _) = dialogue
+      .run(MockBotState(defaultUser :: Nil, notifications = existingNotifications.toList))
+      .value
+
+    val OneTime(_, _, "test wtf", date, true) = state.notifications.last
+
+    date.getDayOfMonth should be (20)
+  }
 
   it should "try asking user again if request is incorrect and request is multiline" in {
     val dialogue = for(
@@ -151,10 +181,13 @@ class NotificationBotSpec extends FlatSpec with Matchers {
     val dialogue = for(
       _ <- send("/list");
       _ <- shouldAnswerWith(sentMessage)(hasExpected("Напоминания:\n\n" +
-        "Напоминание 1 о \"test 1\" в 2018-12-01T12:00 \n" +
+        "Напоминание 1 о \"test 1\" в 2018-12-01T12:00\n" +
         "Напоминание 3 о \"rec test 1\"", Some(Nil)))
     ) yield ()
 
+    dialogue
+      .run(MockBotState(defaultUser :: Nil, notifications = existingNotifications.toList))
+      .value
 
   }
 
@@ -162,7 +195,7 @@ class NotificationBotSpec extends FlatSpec with Matchers {
     val dialogue = for(
       _ <- send("/in \"test 3\" сегодня в 22:00");
       _ <- send("/list");
-      _ <- shouldAnswerWith(sentMessage)(predicate(_.contains("test 3"),Some(l => !l.exists(_.name.contains("-")))))
+      _ <- shouldAnswerWith(sentMessage)(predicate(_.contains("test 3"),l => !l.exists(_.name.contains("-"))))
     ) yield ()
 
     dialogue
@@ -175,8 +208,8 @@ class NotificationBotSpec extends FlatSpec with Matchers {
       b.exists(_.name == name)
 
 
-    val hasRightButton = Some[List[Button] => Boolean](hasOnlyOneButton("->"))
-    val hasLeftButton = Some[List[Button] => Boolean](hasOnlyOneButton("<-"))
+    val hasRightButton = hasOnlyOneButton("->")(_)
+    val hasLeftButton = hasOnlyOneButton("<-")(_)
 
     val dialogue = for(
       _ <- send("/in \"test 3\" сегодня в 22:00");
@@ -195,12 +228,9 @@ class NotificationBotSpec extends FlatSpec with Matchers {
   }
 
   it should "show list command with buttons that open message edit menu" in {
-    def hasButtonsWithNames(names: String*)(buttons: List[Button]): Boolean =
-      buttons.map(_.name) == names.toList
 
-
-    val hasNavigationButtons = Some[List[Button] => Boolean](hasButtonsWithNames("1","2","3", "->"))
-    val hasEditButtons = Some[List[Button] => Boolean](hasButtonsWithNames("Назад", "Перенести", "Удалить"))
+    val hasNavigationButtons = hasButtonsWithNames("1","2","3", "->")(_)
+    val hasEditButtons = hasButtonsWithNames("Назад", "Перенести", "Удалить")(_)
 
     val dialogue = for(
       _ <- send("/in \"test 3\" сегодня в 22:00");
@@ -220,12 +250,10 @@ class NotificationBotSpec extends FlatSpec with Matchers {
   }
 
   it should "show edit menu and allow notification date change" in {
-    def hasButtonsWithNames(names: String*)(buttons: List[Button]): Boolean =
-      buttons.map(_.name) == names.toList
 
 
-    val hasNavigationButtons = Some[List[Button] => Boolean](hasButtonsWithNames("1","2","3", "->"))
-    val hasEditButtons = Some[List[Button] => Boolean](hasButtonsWithNames("Назад", "Перенести", "Удалить"))
+    val hasNavigationButtons = hasButtonsWithNames("1","2","3", "->")(_)
+    val hasEditButtons = hasButtonsWithNames("Назад", "Перенести", "Удалить")(_)
 
     val dialogue = for(
       _ <- send("/in \"test 3\" сегодня в 22:00");
@@ -245,12 +273,9 @@ class NotificationBotSpec extends FlatSpec with Matchers {
   }
 
   it should "show edit menu and allow notification delete" in {
-    def hasButtonsWithNames(names: String*)(buttons: List[Button]): Boolean =
-      buttons.map(_.name) == names.toList
 
-
-    val hasNavigationButtons = Some[List[Button] => Boolean](hasButtonsWithNames("1","2","3", "->"))
-    val hasEditButtons = Some[List[Button] => Boolean](hasButtonsWithNames("Назад", "Перенести", "Удалить"))
+    val hasNavigationButtons = hasButtonsWithNames("1","2","3", "->")(_)
+    val hasEditButtons = hasButtonsWithNames("Назад", "Перенести", "Удалить")(_)
 
     val dialogue = for(
       _ <- send("/in \"test 3\" сегодня в 22:00");
@@ -261,8 +286,6 @@ class NotificationBotSpec extends FlatSpec with Matchers {
       _ <- bot(MockMessage(-1, defaultUser, "", m.buttons.find(_.name == "1").map(_.command)));
       n <- shouldAnswerWith(editOfMessage(m.id))(predicate(_.contains("Редактирование: test 1"), hasEditButtons));
       _ <- bot(MockMessage(-1, defaultUser, "", n.buttons.find(_.name == "Удалить").map(_.command)));
-      s <- State.get[MockBotState];
-      _ =  println(s);
       _ <- shouldAnswerWith(editOfMessage(m.id))(predicate(x => x != "test 1", hasNavigationButtons))
 
     ) yield ()
@@ -340,8 +363,14 @@ class NotificationBotSpec extends FlatSpec with Matchers {
     msg
   }
 
-  private[this] def predicate(f: String => Boolean, button: Option[List[Button] => Boolean] = None)(msg: MockMessage): Assertion =
-    (f(msg.text) && (button.isEmpty || button.get(msg.buttons))) should be (true)
+  private[this] def hasButtonsWithNames(names: String*)(buttons: List[Button]): Boolean =
+    buttons.map(_.name) == names.toList
+
+  private[this] def predicate(f: String => Boolean)(msg: MockMessage): Assertion =
+    f(msg.text) should be (true)
+
+  private[this] def predicate(f: String => Boolean, button: List[Button] => Boolean)(msg: MockMessage): Assertion =
+    f(msg.text) && button(msg.buttons) should be (true)
 
   private[this] def hasExpected(text: String, button: Option[List[Button]] = None)(lastMessage: MockMessage): Assertion =
     lastMessage.text should be (text)

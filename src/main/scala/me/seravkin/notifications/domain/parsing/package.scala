@@ -78,6 +78,9 @@ package object parsing {
   }
 
   sealed trait MomentInFuture extends NotificationProgram {
+
+    def isRelativeToDate: Boolean = false
+
     def toExecutionTime(now: LocalDateTime): LocalDateTime
 
     override def shouldNotify(startMoment: LocalDateTime, now: LocalDateTime): NotificationResult =
@@ -111,6 +114,9 @@ package object parsing {
   }
 
   final case class InDays(days: Int) extends MomentInFuture with Date {
+
+    override def isRelativeToDate: Boolean = true
+
     override def toExecutionTime(now: LocalDateTime): LocalDateTime =
       now.withHour(0).withMinute(0).plusDays(days)
   }
@@ -142,6 +148,9 @@ package object parsing {
   }
 
   final case class FromFormattedDate(date: Date, time: Time) extends MomentInFuture {
+
+    override def isRelativeToDate: Boolean = date.isRelativeToDate
+
     override def toExecutionTime(now: LocalDateTime): LocalDateTime =
       date.toExecutionTime(now)
         .withHour(time.toExecutionTime(now).getHour)
