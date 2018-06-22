@@ -39,8 +39,8 @@ object NotificationBot {
     def build: Bot[Msg, F] =
       message =>
         authenticate(message).flatMap {
-          case Some((st, user)) =>
-            process(user, st, message)
+          case Some((state, user)) =>
+            process(user)(state, message)
           case _ if !message.isPrivate =>
             sender.send(message.chatId, "Бот поддерживает только приватные беседы ") >>
             ignore
@@ -49,8 +49,27 @@ object NotificationBot {
             ignore
         }
 
+    private[this] def process(user: User): (ChatState, Msg) => F[Unit] =
+      handlers(
+        helpHandler,
+        oldShowHandler(user),
+        oldEditHandler,
+        listHandler(user),
+        inHandler(user),
+      )
+
+    private[this] def handlers(functions: BotHandler*)(chatState: ChatState, message: Msg) =
+      functions.reduce(_ orElse _).applyOrElse[(ChatState, Msg), F[Unit]](chatState -> message, unknownHandler)
 
     private[this] val ignore = ().pure[F]
+
+    private[this] val DATE_SHORT = "dd.MM"
+    private[this] val TIME_FORMAT = "HH:mm"
+    private[this] val HELP_TEXT = "Бот c напоминаниями\n" +
+      "/in - Напоминает о событии через заданный интервал времени\n" +
+      "/show - Показывает активные напоминания\n" +
+      "/delete <id> - Удаляет напоминания с указанным id\n" +
+      "/change <id> - Изменяет дату и время на напоминании с указанным id"
 
     private[this] def authenticate(msg: Msg): F[Option[(ChatState, User)]] = (for(
       name  <- OptionT.fromOption[F](msg.username);
@@ -59,87 +78,103 @@ object NotificationBot {
       state <- OptionT.liftF(chatStateRepository.get())
     ) yield (state, user)).value
 
-    private[this] def process(user: User, chatState: ChatState, message: Msg): F[Unit] = (chatState, message) match {
+    private[this] type BotHandler = PartialFunction[(ChatState, Msg), F[Unit]]
 
-      case HasMessage(ContainsText("/help")) =>
+    private[this] val helpHandler: BotHandler = {
+      case HasMessage(message @ ContainsText("/help")) =>
         sender.send(message.chatId, HELP_TEXT) >>
-        ignore
+          ignore
 
-      case HasMessage(ContainsText("/start")) =>
+      case HasMessage(message @ ContainsText("/start")) =>
         sender.send(message.chatId, HELP_TEXT) >>
-        ignore
+          ignore
+    }
 
-      case HasMessage(ContainsText("/show")) =>
+    private[this] def oldShowHandler(user: User): BotHandler = {
+      case HasMessage(message @ ContainsText("/show")) =>
         for (notifications <- notificationsRepository(user);
              answer        =  show(notifications);
              _             <- sender.send(message.chatId, answer))
           yield ()
 
-      case HasMessage(ContainsText(CommandWithArgs("/delete", IsLong(id) :: Nil))) =>
+    }
+
+    private[this] val oldEditHandler: BotHandler = {
+      case HasMessage(message @ ContainsText(CommandWithArgs("/delete", IsLong(id) :: Nil))) =>
         notificationsRepository.deactivate(id :: Nil) >>
-        sender.send(message.chatId, "Напоминание удалено") >>
-        ignore
+          sender.send(message.chatId, "Напоминание удалено") >>
+          ignore
 
-      case HasMessage(ContainsText(CommandWithArgs("/change", IsLong(id) :: Nil))) =>
+      case HasMessage(message @ContainsText(CommandWithArgs("/change", IsLong(id) :: Nil))) =>
         changeNotificationDate(message, id)
+    }
 
-      case HasMessage(ContainsText(CommandWithArgs("/list", Nil))) =>
+    private[this] def listHandler(user: User): BotHandler = {
+      case HasMessage(message @ ContainsText(CommandWithArgs("/list", Nil))) =>
         showPage(user, message, 0, 3)
 
-      case HasMessage(ContainsData(ChangePage(id, skip, take))) =>
+      case HasMessage(message @ ContainsData(ChangePage(id, skip, take))) =>
         editPage(id, user, message, skip, take)
 
-      case HasMessage(ContainsText("/in")) =>
-        chatStateRepository.set(InControlWaitingForText) >>
-        sender.send(message.chatId, "Введите напоминание:") >>
-        ignore
-
-      case (s, ContainsText("/exit")) if s != Nop =>
-        chatStateRepository.set(Nop) >>
-        sender.send(message.chatId, "Создание напоминания отменено") >>
-        ignore
-
-      case (InControlWaitingForText, ContainsText(text)) =>
-        chatStateRepository.set(InControlWaitingForTime(message.chatId, text)) >>
-        sender.send(message.chatId, "Введите желаемое время:") >>
-        ignore
-
-      case (s @ InControlWaitingForTime(chatId, text), ContainsText(time)) =>
-        tryStore(user, message, text, time);
-
-      case (InControlWaitingForConfirmation(chatId, text, time), ContainsData(SelectNotificationDate(day, month))) =>
-        // Можем это делать, т.к. в прошлый раз уже распарсили
-        val Right(moment) = momentInFutureParser.parseMomentInFuture(time)
-        storeAndReply(user, message, text, moment.toExecutionTime(systemDateTime.now.withMonth(month).withDayOfMonth(day)))
-
-      case HasMessage(ContainsData(OpenNotificationMenu(msgId, notificationId, commandToReturn))) =>
-        (for(notification <- OptionT(notificationsRepository(notificationId));
-             _            <- OptionT.liftF(sender.send(message.chatId, s"Редактирование: ${notification.text}",
-              Button("Назад", commandToReturn) ::
-              Button("Перенести", ChangeNotificationTimeAndMenu(msgId, notificationId, commandToReturn)) ::
-              Button("Удалить", DeleteNotification(msgId, notificationId, commandToReturn)) :: Nil, Some(msgId))))
-          yield ()).getOrElseF(ignore)
-
-      case HasMessage(ContainsText(CommandWithQuotedArgs("/in", text :: TailAsText(notification)))) =>
-        tryStore(user, message, text, notification)
-
-      case HasMessage(ContainsData(DeleteNotification(msgId, notificationId, ChangePage(_, skip, take)))) =>
+      case HasMessage(message @ ContainsData(DeleteNotification(msgId, notificationId, ChangePage(_, skip, take)))) =>
         for(_ <- notificationsRepository.deactivate(notificationId :: Nil);
             _ <- editPage(msgId, user, message, skip, take))
           yield ()
 
-      case HasMessage(ContainsData(ChangeNotificationTimeAndMenu(msgId, notificationId, _))) =>
+      case HasMessage(message @ ContainsData(ChangeNotificationTimeAndMenu(msgId, notificationId, _))) =>
         for(_ <- notificationsRepository.deactivate(notificationId :: Nil);
             _ <- changeNotificationDate(message, notificationId))
           yield ()
 
-      case HasMessage(ContainsData(ChangeNotificationTime(id))) =>
+      case HasMessage(message @ ContainsData(ChangeNotificationTime(id))) =>
         changeNotificationDate(message, id)
+    }
 
+    private[this] def inHandler(user: User): BotHandler = {
+
+      case HasMessage(message @ ContainsText("/in")) =>
+        chatStateRepository.set(InControlWaitingForText) >>
+          sender.send(message.chatId, "Введите напоминание:") >>
+          ignore
+
+      case (s, message @ ContainsText("/exit")) if s != Nop =>
+        chatStateRepository.set(Nop) >>
+          sender.send(message.chatId, "Создание напоминания отменено") >>
+          ignore
+
+      case (InControlWaitingForText, message @ ContainsText(text)) =>
+        chatStateRepository.set(InControlWaitingForTime(message.chatId, text)) >>
+          sender.send(message.chatId, "Введите желаемое время:") >>
+          ignore
+
+      case (s @ InControlWaitingForTime(chatId, text), message @ ContainsText(time)) =>
+        tryStore(user, message, text, time);
+
+      case (InControlWaitingForConfirmation(chatId, text, time), message @ ContainsData(SelectNotificationDate(day, month))) =>
+        // Можем это делать, т.к. в прошлый раз уже распарсили
+        val Right(moment) = momentInFutureParser.parseMomentInFuture(time)
+        storeAndReply(user, message, text, moment.toExecutionTime(systemDateTime.now.withMonth(month).withDayOfMonth(day)))
+
+      case HasMessage(message @ ContainsData(OpenNotificationMenu(msgId, notificationId, commandToReturn))) =>
+        (for(notification <- OptionT(notificationsRepository(notificationId));
+             _            <- OptionT.liftF(sender.send(message.chatId, s"Редактирование: ${notification.text}",
+               Button("Назад", commandToReturn) ::
+                 Button("Перенести", ChangeNotificationTimeAndMenu(msgId, notificationId, commandToReturn)) ::
+                 Button("Удалить", DeleteNotification(msgId, notificationId, commandToReturn)) :: Nil, Some(msgId))))
+          yield ()).getOrElseF(ignore)
+
+      case HasMessage(message @ ContainsText(CommandWithQuotedArgs("/in", text :: TailAsText(notification)))) =>
+        tryStore(user, message, text, notification)
+
+
+    }
+
+    private[this] val unknownHandler: ((ChatState, Msg)) => F[Unit] = {
       case (_, msg) =>
         sender.send(msg.chatId, "Неизвестная команда") >>
-        ignore
+          ignore
     }
+
 
     private[this] def changeNotificationDate(message: Msg, id: Long) = {
       (for (notification <- OptionT(notificationsRepository(id));
@@ -228,13 +263,7 @@ object NotificationBot {
           case n: Recurrent => s"Напоминание ${n.id} о " + "\"" + n.text + "\""
         }.foldLeft("") { _ + "\n" + _ }
 
-    private[this] val DATE_SHORT = "dd.MM"
-    private[this] val TIME_FORMAT = "HH:mm"
-    private[this] val HELP_TEXT = "Бот c напоминаниями\n" +
-      "/in - Напоминает о событии через заданный интервал времени\n" +
-      "/show - Показывает активные напоминания\n" +
-      "/delete <id> - Удаляет напоминания с указанным id\n" +
-      "/change <id> - Изменяет дату и время на напоминании с указанным id"
+
 
 
     private object HasMessage {
