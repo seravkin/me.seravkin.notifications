@@ -105,8 +105,6 @@ class DurationParserSpec extends FlatSpec with Matchers {
     val parser = new DurationParser(LegacyInternationalization)
     val result = parser.parse(text)
 
-    println(result)
-
     result.toOption.nonEmpty should be (true)
 
     val duration = result.toOption.get
