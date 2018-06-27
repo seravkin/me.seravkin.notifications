@@ -2,24 +2,40 @@ package me.seravkin.notifications.domain.parsing
 
 import java.time.Duration
 
+import me.seravkin.notifications.domain.internationalization.Internationalization
+import me.seravkin.notifications.domain.internationalization.Words._
+
 import scala.util.parsing.combinator.RegexParsers
 
-trait TimeConstants { this: RegexParsers =>
+trait TimeConstants { this: RegexParsers with HasInternationalization =>
 
-  def second: Parser[Int => Duration] = ("секунда" | "секунды" |  "секунд" | "сек" | "c" | "seconds" | "second" | "sec" | "s") ^^ { _ => i : Int => Duration.ofSeconds(i) }
-  def minute: Parser[Int => Duration] = ("минуты" | "минута" | "минут" | "мин" | "м" | "minutes" | "minute" | "min" | "m") ^^ { _ => i : Int => Duration.ofMinutes(i) }
-  def hour: Parser[Int => Duration] = ("часов" | "часа" | "час" | "ч" | "hours" | "hour" | "h") ^^ { _ => i : Int => Duration.ofHours(i) }
-  def day: Parser[Int => Duration] = ("дней" | "день" | "дня" | "д"| "days" | "day" | "d") ^^ { _ => i : Int => Duration.ofDays(i) }
-  def week: Parser[Int => Duration] = ("неделю" | "недели" | "неделя" | "недель" | "нед" | "week" | "weeks") ^^ { _ => i : Int => Duration.ofDays(7 * i) }
+  private[this] def word(word: Word, f: Long => Duration): Parser[Int => Duration] =
+    anyOf(word) ^^ { _ => i: Int => f(i) }
 
-  def monday: Parser[Int] = ("понедельник" | "пн" | "monday" | "mon") ^^ { _ => 0 }
-  def tuesday: Parser[Int] = ("вторник" | "вт" | "tuesday" | "tue") ^^ { _ => 1 }
-  def wednesday: Parser[Int] = ("среда" | "среду" | "ср" | "wednesday" | "wed") ^^ { _ => 2 }
-  def thursday: Parser[Int] = ("четверг" | "чт" | "thursday" | "thu") ^^ { _ => 3 }
-  def friday: Parser[Int] = ("пятница" | "пятницу" | "пт" | "friday" | "fri") ^^ { _ => 4 }
-  def saturday: Parser[Int] = ("суббота" | "субботу" | "сб" | "saturday" | "sat") ^^ { _ => 5 }
-  def sunday: Parser[Int] = ("воскресенье" | "вс" | "sunday" | "sun") ^^ { _ => 6 }
+  private[this] def dayOfWeek[T <: Word with DayOfWeek](t: T): Parser[Int] =
+    anyOf(t) ^^ { _ => t.toInt }
+
+  def second: Parser[Int => Duration] = word(Second, Duration.ofSeconds)
+  def minute: Parser[Int => Duration] = word(Minute, Duration.ofMinutes)
+  def hour: Parser[Int => Duration] = word(Hour, Duration.ofHours)
+  def day: Parser[Int => Duration] = word(Day, Duration.ofDays)
+  def week: Parser[Int => Duration] = word(Week, i => Duration.ofDays(i * 7))
+
+  def monday: Parser[Int] = dayOfWeek(Monday)
+  def tuesday: Parser[Int] = dayOfWeek(Tuesday)
+  def wednesday: Parser[Int] = dayOfWeek(Wednesday)
+  def thursday: Parser[Int] = dayOfWeek(Thursday)
+  def friday: Parser[Int] = dayOfWeek(Friday)
+  def saturday: Parser[Int] = dayOfWeek(Saturday)
+  def sunday: Parser[Int] = dayOfWeek(Sunday)
 
   def daysOfWeek: Parser[Int] = monday | tuesday | wednesday | thursday | friday | saturday | sunday
+
+  def night: Parser[Period] = anyOf(AtNight) ^^ { _ => Night }
+  def morning: Parser[Period] = anyOf(AtMorning) ^^ { _ => Morning }
+  def dayAsTime: Parser[Period] = anyOf(AtDay) ^^ { _ => DayAsTime }
+  def evening: Parser[Period] = anyOf(AtEvening) ^^ { _ => Evening }
+
+  def periods: Parser[Period] = night | morning | dayAsTime | evening
 
 }

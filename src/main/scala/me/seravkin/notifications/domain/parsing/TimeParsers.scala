@@ -1,13 +1,19 @@
 package me.seravkin.notifications.domain.parsing
 
+import me.seravkin.notifications.domain.internationalization.Words.{CurrentTime, In}
+
 import scala.util.parsing.combinator.RegexParsers
 
-trait TimeParsers extends RegexParsers { this: CommonParsers with TimeConstants with DateParsers =>
+trait TimeParsers { this: CommonParsers with TimeConstants with DateParsers with RegexParsers with HasInternationalization =>
 
-  def inSameTime: Parser[Time] = ("это же время" | "текущее время" | "current time") ^^ { _ => InCurrentTime }
+  def inSameTime: Parser[Time] = anyOf(CurrentTime) ^^ { _ => InCurrentTime }
 
   def time: Parser[Time] = formattedTime | inSameTime
 
-  def inTime: Parser[MomentInFuture] = (date ~ "в" ~ time) ^^  { case day ~ _ ~ time => FromFormattedDate(day, time) }
+  def timePeriods: Parser[Time] = periods ^^ { AtFuzzyTime }
+
+  def inAndTime: Parser[Time] = timePeriods | (anyOf(In) ~ time ^^ { case _ ~ t => t })
+
+  def inTime: Parser[MomentInFuture] = (date ~ inAndTime) ^^  { case day ~ time => FromFormattedDate(day, time) }
 
 }

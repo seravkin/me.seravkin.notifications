@@ -2,6 +2,7 @@ package me.seravkin.notifications.test.parsing
 
 import java.time.Duration
 
+import me.seravkin.notifications.domain.internationalization.LegacyInternationalization
 import me.seravkin.notifications.domain.parsing._
 import org.scalatest.{FlatSpec, FunSuite, Matchers}
 
@@ -23,12 +24,20 @@ class DurationParserSpec extends FlatSpec with Matchers {
     assertParsedTime(FromFormattedDate(FormattedDate(22, 7), FormattedTime(12, 0)))("22.07 в 12:00")
   }
 
+  it should "parse simple date with fuzzy time" in {
+    assertParsedTime(FromFormattedDate(FormattedDate(22, 7), AtFuzzyTime(Evening)))("22.07 вечером")
+  }
+
   it should "parse date with full" in {
     assertParsedTime(FromFormattedDate(FormattedDateWithYear(22, 7, 2017), FormattedTime(12, 0)))("22.07.2017 в 12:00")
   }
 
   it should "parse today date and time" in {
     assertParsedTime(FromFormattedDate(InDays(0), FormattedTime(12, 45)))("сегодня в 12:45")
+  }
+
+  it should "parse today date and time ignoring case" in {
+    assertParsedTime(FromFormattedDate(InDays(0), FormattedTime(12, 45)))("СеГоднЯ В 12:45")
   }
 
   it should "parse date and current time" in {
@@ -45,6 +54,10 @@ class DurationParserSpec extends FlatSpec with Matchers {
 
   it should "parse in day of week" in {
     assertParsedTime(FromFormattedDate(InNextDayOfWeek(0,1), InCurrentTime))("во вторник в это же время")
+  }
+
+  it should "parse in day of week at fuzzy time" in {
+    assertParsedTime(FromFormattedDate(InNextDayOfWeek(0,1), AtFuzzyTime(Morning)))("во вторник утром")
   }
 
   it should "parse in day of week with time" in {
@@ -89,12 +102,14 @@ class DurationParserSpec extends FlatSpec with Matchers {
 
 
   private def assertParsedTime(momentInFuture: NotificationProgram)(text: String) = {
-    var parser = new DurationParser()
-    val result = parser.parse(text).toOption
+    val parser = new DurationParser(LegacyInternationalization)
+    val result = parser.parse(text)
 
-    result.nonEmpty should be (true)
+    println(result)
 
-    val duration = result.get
+    result.toOption.nonEmpty should be (true)
+
+    val duration = result.toOption.get
 
     duration should be (momentInFuture)
   }

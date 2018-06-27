@@ -134,18 +134,18 @@ object NotificationBot {
 
       case HasMessage(message @ ContainsText("/in")) =>
         chatStateRepository.set(InControlWaitingForText) >>
-          sender.send(message.chatId, "Введите напоминание:") >>
-          ignore
+        sender.send(message.chatId, "Введите напоминание:") >>
+        ignore
 
       case (s, message @ ContainsText("/exit")) if s != Nop =>
         chatStateRepository.set(Nop) >>
-          sender.send(message.chatId, "Создание напоминания отменено") >>
-          ignore
+        sender.send(message.chatId, "Создание напоминания отменено") >>
+        ignore
 
       case (InControlWaitingForText, message @ ContainsText(text)) =>
         chatStateRepository.set(InControlWaitingForTime(message.chatId, text)) >>
-          sender.send(message.chatId, "Введите желаемое время:") >>
-          ignore
+        sender.send(message.chatId, "Введите желаемое время:") >>
+        ignore
 
       case (s @ InControlWaitingForTime(chatId, text), message @ ContainsText(time)) =>
         tryStore(user, message, text, time);
@@ -158,7 +158,7 @@ object NotificationBot {
       case HasMessage(message @ ContainsData(OpenNotificationMenu(msgId, notificationId, commandToReturn))) =>
         (for(notification <- OptionT(notificationsRepository(notificationId));
              _            <- OptionT.liftF(sender.send(message.chatId, s"Редактирование: ${notification.text}",
-               Button("Назад", commandToReturn) ::
+                 Button("Назад", commandToReturn) ::
                  Button("Перенести", ChangeNotificationTimeAndMenu(msgId, notificationId, commandToReturn)) ::
                  Button("Удалить", DeleteNotification(msgId, notificationId, commandToReturn)) :: Nil, Some(msgId))))
           yield ()).getOrElseF(ignore)

@@ -2,6 +2,10 @@ package me.seravkin.notifications.domain
 
 import java.time.{Duration, LocalDate, LocalDateTime}
 
+import me.seravkin.notifications.domain.internationalization.Words.DayOfWeek
+
+import scala.util.Random
+
 package object parsing {
 
   sealed trait NotificationResult {
@@ -134,6 +138,26 @@ package object parsing {
   final case class FormattedTime(hours: Int, minutes: Int) extends MomentInFuture with Time {
     override def toExecutionTime(now: LocalDateTime): LocalDateTime =
       now.withHour(hours).withMinute(minutes)
+  }
+
+  sealed trait Period { def hour(): Int; def minute(): Int }
+
+  sealed trait RandomPeriod extends Period {
+    protected[this] val period: (Int, Int)
+
+    override def hour(): Int = period._1 + new Random().nextInt(period._2 - period._1 + 1)
+    override def minute(): Int = 5
+  }
+
+  final case object Night extends RandomPeriod { protected[this] val period: (Int, Int) = 0 -> 8 }
+  final case object Morning extends RandomPeriod { protected[this] val period: (Int, Int) = 8 -> 12 }
+  final case object DayAsTime extends RandomPeriod { protected[this] val period: (Int, Int) = 12 -> 19 }
+  final case object Evening extends RandomPeriod { protected[this] val period: (Int, Int) = 19 -> 23 }
+
+  final case class AtFuzzyTime(period: Period) extends MomentInFuture with Time {
+    override def toExecutionTime(now: LocalDateTime): LocalDateTime = {
+      now.withHour(period.hour()).withMinute(period.minute())
+    }
   }
 
   final case object InCurrentTime extends MomentInFuture with Time {

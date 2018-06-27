@@ -3,41 +3,29 @@ package me.seravkin.notifications.domain.parsing
 import java.time.Duration
 import java.time.format.DateTimeFormatter
 
+import me.seravkin.notifications.domain.internationalization.Words._
+
 import scala.util.parsing.combinator._
 
-trait CommonParsers extends RegexParsers { this: TimeConstants =>
+trait CommonParsers extends RegexParsers { this: TimeConstants with HasInternationalization =>
 
-  private[this] val FullDateRegex = """([0-9]{1,2})\.([0-9]{2})\.([0-9]{4})""".r
-  private[this] val DateRegex = """([0-9]{1,2})\.([0-9]{2})""".r
-  private[this] val TimeRegex = """([0-9]{1,2})\:([0-9]{2})""".r
+  private[this] val FullDateRegex = internationalization.words(FullDateRegexString).head.r
+  private[this] val DateRegex = internationalization.words(DateRegexString).head.r
+  private[this] val TimeRegex = internationalization.words(TimeRegexString).head.r
 
-  private[this] def numeral(value: Int, strings: String*): Parser[Int] =
-    strings.map(literal).reduce { _ | _ } ^^ { _ => value }
-
-  private[this] def alternativesOf[T](parsers: Parser[T]*): Parser[T] =
-    parsers.reduce { _ | _ }
+  private[this] def numeral(value: Int): Parser[Int] =
+    anyOf(Numeral(value)) ^^ { _ => value }
 
   def int: Parser[Int] = stringInt |  "([0-9]+)".r ^^ { _.toInt }
 
-  def stringInt: Parser[Int] = alternativesOf(
-    numeral(0, "ноль"),
-    numeral(1, "один", "одну"),
-    numeral(2, "два", "две"),
-    numeral(3, "три"),
-    numeral(4, "четыре"),
-    numeral(5, "пять"),
-    numeral(6, "шесть"),
-    numeral(7, "семь"),
-    numeral(8, "восемь"),
-    numeral(9, "девять")
-  )
+  def stringInt: Parser[Int] = 0.to(9).map(numeral).reduce { _ | _ }
 
   def manyDaysOfWeek: Parser[Set[Int]] = rep1sep(daysOfWeek, ",") ^^ { _.toSet }
 
-  def workingDays: Parser[Set[Int]] = ("будний день" | "рабочий день" | "будний" |  "будни") ^^
+  def workingDays: Parser[Set[Int]] = anyOf(WorkingDay) ^^
     { _ => Set(0,1,2,3,4) }
 
-  def weekends: Parser[Set[Int]] = ("выходные" | "выходной день" | "выходной") ^^
+  def weekends: Parser[Set[Int]] = anyOf(Weekend) ^^
     { _ => Set(5, 6) }
 
   def days: Parser[Set[Int]] = weekends | workingDays | manyDaysOfWeek
