@@ -43,6 +43,11 @@ class NotificationProgramSpec  extends FlatSpec with Matchers  {
       now.plusDays(3))
   }
 
+  it should "notify in days and fuzzy time" in {
+    assertExecutionDate(FromFormattedDate(InDays(3), AtFuzzyTime(Morning)),
+      t => t.getDayOfYear == now.getDayOfYear + 3 && t.getHour >= 8 && t.getHour <= 12)
+  }
+
   it should "notify in next day of week" in {
     assertExecutionDateAndNotification(FromFormattedDate(InNextDayOfWeek(0,1), InCurrentTime),
       now.plusDays(1))
@@ -82,6 +87,14 @@ class NotificationProgramSpec  extends FlatSpec with Matchers  {
     time should be (expectedExecutionTime)
 
     momentInFuture.shouldNotify(now, expectedExecutionTime.plusSeconds(10)) should be (NotifyAndStop)
+  }
+
+  private[this] def assertExecutionDate(momentInFuture: MomentInFuture,
+                                                       f: LocalDateTime => Boolean) = {
+
+    val time = momentInFuture.toExecutionTime(now)
+
+    f(time) should be (true)
   }
 
   private[this] def assertNotification(momentInFuture: NotificationProgram,
