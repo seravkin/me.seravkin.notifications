@@ -386,7 +386,8 @@ class NotificationBotSpec extends FlatSpec with Matchers {
     "/in - Напоминает о событии через заданный интервал времени\n" +
     "/show - Показывает активные напоминания\n" +
     "/delete <id> - Удаляет напоминания с указанным id\n" +
-    "/change <id> - Изменяет дату и время на напоминании с указанным id"
+    "/change <id> - Изменяет дату и время на напоминании с указанным id\n" +
+    "/list - Показывает новый список напоминаний"
 
   private[this] val existingNotifications =  Vector(
     OneTime(1, defaultUserId, "test 1", LocalDateTime.of(2018,12,1,12,0), true),
