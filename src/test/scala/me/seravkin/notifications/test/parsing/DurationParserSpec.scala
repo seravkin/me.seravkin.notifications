@@ -36,6 +36,10 @@ class DurationParserSpec extends FlatSpec with Matchers {
     assertParsedTime(FromFormattedDate(InDays(0), FormattedTime(12, 45)))("сегодня в 12:45")
   }
 
+  it should "parse today date and time in short format" in {
+    assertParsedTime(FromFormattedDate(InDays(0), FormattedTime(12, 45)))("12:45")
+  }
+
   it should "parse today date and time ignoring case" in {
     assertParsedTime(FromFormattedDate(InDays(0), FormattedTime(12, 45)))("СеГоднЯ В 12:45")
   }
