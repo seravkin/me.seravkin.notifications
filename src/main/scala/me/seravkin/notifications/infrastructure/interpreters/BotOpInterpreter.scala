@@ -1,6 +1,9 @@
 package me.seravkin.notifications.infrastructure.interpreters
 
 import cats._
+import cats.implicits._
+import cats.data._
+import cats.effect._
 import cats.instances.future._
 import doobie._
 import doobie.implicits._
@@ -11,11 +14,14 @@ import info.mukel.telegrambot4s.models.{InlineKeyboardButton, InlineKeyboardMark
 import me.seravkin.notifications.bot.NotificationBot.{ChatState, Nop}
 import me.seravkin.notifications.domain.algebra.BotAlgebra._
 import me.seravkin.notifications.infrastructure.messages.Button
+import me.seravkin.tg.adapter.requests.RequestHandlerF
 import monix.eval.Task
+
 
 import scala.collection.concurrent.TrieMap
 
-class BotIOInterpreter(chatId: Option[Long], map: TrieMap[Long, ChatState], requestHandler: RequestHandler, transactor: Transactor[Task]) extends (BotOp ~> Task) {
+final case class BotOpInterpreter(map: TrieMap[Long, ChatState], requestHandler: RequestHandlerF[IO])
+  extends (BotOp ~> ReaderT[IO, Transactor[IO], ?]) {
 
   private[this] def buttonsToMarkup(buttons: List[Button]): Option[InlineKeyboardMarkup] = Some(InlineKeyboardMarkup.singleColumn(
     buttons.map(b =>
@@ -23,26 +29,24 @@ class BotIOInterpreter(chatId: Option[Long], map: TrieMap[Long, ChatState], requ
   ))
 
 
-  override def apply[A](fa: BotOp[A]): Task[A] = fa match {
-    case Get() => Task {
-      map.getOrElse(chatId.getOrElse(-1), Nop).asInstanceOf[A]
+  override def apply[A](fa: BotOp[A]): ReaderT[IO, Transactor[IO], A] = ReaderT[IO, Transactor[IO], A](xa => fa match {
+    case Get(chatId) => IO {
+      map.getOrElse(chatId, Nop)
     }
 
-    case Set(state) =>
-      for(chatIdClear <- chatId) {
-        map += chatIdClear -> state.asInstanceOf[ChatState]
-      }
-      Task { () }
+    case Set(chatId, state) => IO {
+      map += chatId -> state
+      ()
+    }
+    case Send(chatId, text, buttons, None) => requestHandler
+      .ask(SendMessage(chatId, text, replyMarkup = buttonsToMarkup(buttons)))
+      .map(_.messageId)
 
-    case Send(chatId, text, buttons, None) => Task.fromFuture {
-        requestHandler(SendMessage(chatId, text, replyMarkup = buttonsToMarkup(buttons)))
-      }.map(_.messageId)
-
-    case Send(chatId, text, buttons, Some(msgId)) => Task.fromFuture {
-      requestHandler(EditMessageText(Some(chatId), Some(msgId), text = text, replyMarkup = buttonsToMarkup(buttons)))
-    }.map(_ => msgId)
+    case Send(chatId, text, buttons, Some(msgId)) => requestHandler
+      .ask(EditMessageText(Some(chatId), Some(msgId), text = text, replyMarkup = buttonsToMarkup(buttons)))
+      .map(_ => msgId)
 
     case DatabaseAction(action) =>
-      transactor.rawTrans.apply(action)
-  }
+      xa.rawTrans.apply(action)
+  })
 }

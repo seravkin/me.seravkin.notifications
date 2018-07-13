@@ -6,11 +6,10 @@ import cats._
 import cats.data._
 import cats.syntax.all._
 import me.seravkin.notifications.bot.NotificationBot
-import me.seravkin.notifications.bot.NotificationBot.{ChatState, Nop, NotificationBotBuilder}
+import me.seravkin.notifications.bot.NotificationBot.{ChatState, Nop}
 import me.seravkin.notifications.domain.Notifications.{Notification, OneTime, Recurrent}
 import me.seravkin.notifications.domain.User
 import me.seravkin.notifications.domain.parsing.CombinatorMomentInFutureParser
-import me.seravkin.notifications.infrastructure.Bot
 import me.seravkin.notifications.infrastructure.messages.{Button, Sender}
 import me.seravkin.notifications.infrastructure.state.ChatStateRepository
 import me.seravkin.notifications.infrastructure.time.ActualSystemDateTime
@@ -18,6 +17,7 @@ import me.seravkin.notifications.persistance.NotificationsRepository
 import org.scalatest._
 import shapeless._
 import me.seravkin.notifications.test.mocks._
+import me.seravkin.tg.adapter.Bot
 
 class NotificationBotSpec extends FlatSpec with Matchers {
 
@@ -99,13 +99,13 @@ class NotificationBotSpec extends FlatSpec with Matchers {
   }
   
   it should "ask exact date if notification was requested before 00:00" in {
-    val bot = NotificationBotBuilder[MockMessage, State[MockBotState, ?]](
+    val bot = NotificationBot[MockMessage, State[MockBotState, ?]](
       MockUsersRepository(defaultUser),
       MockChatStateRepository,
       MockSender,
       CombinatorMomentInFutureParser,
       MockNotificationRepository,
-      MockDateTime(LocalDateTime.of(2018,5,17,23,55))).build
+      MockDateTime(LocalDateTime.of(2018,5,17,23,55)))
 
     def sendAtNight(text: String) =
       bot(MockMessage(-1, defaultUser, text))
@@ -397,13 +397,13 @@ class NotificationBotSpec extends FlatSpec with Matchers {
     Recurrent(5, defaultUserId + 1, "asdasd", LocalDateTime.now(), LocalDateTime.now(), true)
   )
 
-  private[this] val bot: Bot[MockMessage, State[MockBotState, ?]] =
-    NotificationBotBuilder[MockMessage, State[MockBotState, ?]](
+  private[this] val bot =
+    NotificationBot[MockMessage, State[MockBotState, ?]](
       MockUsersRepository(defaultUser),
       MockChatStateRepository,
       MockSender,
       CombinatorMomentInFutureParser,
       MockNotificationRepository,
-      mockedDateTime).build
+      mockedDateTime)
 
 }

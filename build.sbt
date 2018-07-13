@@ -9,7 +9,8 @@ scalacOptions += "-Ypartial-unification"
 resolvers ++= Seq(
   Resolver.sonatypeRepo("releases"),
   Resolver.sonatypeRepo("snapshots"),
-  Resolver.sonatypeRepo("staging")
+  Resolver.sonatypeRepo("staging"),
+  Resolver.bintrayRepo("seravkin","maven")
 )
 
 addCompilerPlugin("org.spire-math" %% "kind-projector" % "0.9.4")
@@ -19,9 +20,10 @@ val http4sVersion = "0.18.0"
 
 libraryDependencies ++= Seq(
   "info.mukel" %% "telegrambot4s" % "3.0.14",
-  "org.typelevel" %% "cats-core" % "1.0.1",
-  "org.typelevel" %% "cats-free" % "1.0.1",
-  "org.typelevel" %% "cats-effect" % "0.8",
+  "org.typelevel" %% "cats-core" % "1.1.0",
+  "org.typelevel" %% "cats-free" % "1.1.0",
+  "org.typelevel" %% "cats-effect" % "1.0.0-RC2",
+  "default" %% "me-seravkin-tg-adapter" % "0.1",
   "com.chuusai" %% "shapeless" % "2.3.3",
   "org.http4s" %% "http4s-dsl" % http4sVersion,
   "org.http4s" %% "http4s-blaze-server" % http4sVersion,

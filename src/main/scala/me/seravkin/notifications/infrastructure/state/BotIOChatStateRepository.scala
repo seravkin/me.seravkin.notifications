@@ -5,9 +5,9 @@ import me.seravkin.notifications.bot.NotificationBot.ChatState
 import me.seravkin.notifications.domain.algebra.BotAlgebra.{BotIO, BotOp, Get, Set}
 
 object BotIOChatStateRepository extends ChatStateRepository[ChatState, BotIO] {
-  override def get(): BotIO[ChatState] =
-    Free.liftF(Get())
+  override def get(chatId: Long): BotIO[ChatState] =
+    Free.liftF(Get(chatId))
 
-  override def set(s: ChatState): BotIO[Unit] =
-    Free.liftF[BotOp,Unit](Set(s))
+  override def set(chatId: Long, s: ChatState): BotIO[Unit] =
+    Free.liftF[BotOp,Unit](Set(chatId, s))
 }

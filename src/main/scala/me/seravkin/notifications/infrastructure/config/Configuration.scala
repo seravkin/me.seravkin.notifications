@@ -3,6 +3,7 @@ package me.seravkin.notifications.infrastructure.config
 import java.io.File
 import java.nio.file.{Files, Paths}
 
+import cats.effect._
 import com.typesafe.config.ConfigFactory
 import com.zaxxer.hikari.HikariConfig
 
@@ -27,7 +28,7 @@ object Configuration {
 
   case class NotificationConfiguration(telegramApiKey: String, secondsForScheduler: Int, hikariConfig: HikariConfiguration)
 
-  def load(): NotificationConfiguration = {
+  def load(): IO[NotificationConfiguration] = IO {
     val configPath = Option("notifications.conf").filter(x => Files.exists(Paths.get(x)))
       .getOrElse(System.getenv("NOTIFICATIONS_CONFIG_PATH"))
 
