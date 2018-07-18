@@ -1,7 +1,9 @@
 package me.seravkin.notifications.bot
 
+import java.text.SimpleDateFormat
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
+import java.util.Locale
 
 import cats._
 import cats.data.OptionT
@@ -82,8 +84,8 @@ final case class NotificationBot[Msg: Message, F[_] : Monad](usersRepository: Us
   private[this] def oldShowHandler(user: User): BotHandler = {
     case HasMessage(message@ContainsText("/show")) =>
       for (notifications <- notificationsRepository(user);
-           answer = show(notifications);
-           _ <- sender.send(message.chatId, answer))
+           answer        =  show(notifications);
+           _             <- sender.send(message.chatId, answer))
         yield ()
 
   }
@@ -146,7 +148,7 @@ final case class NotificationBot[Msg: Message, F[_] : Monad](usersRepository: Us
 
     case HasMessage(message@ContainsData(OpenNotificationMenu(msgId, notificationId, commandToReturn))) =>
       (for (notification <- OptionT(notificationsRepository(notificationId));
-            _ <- OptionT.liftF(sender.send(message.chatId, s"Редактирование: ${notification.text}",
+            _            <- OptionT.liftF(sender.send(message.chatId, s"Редактирование: ${notification.text}",
               Button("Назад", commandToReturn) ::
                 Button("Перенести", ChangeNotificationTimeAndMenu(msgId, notificationId, commandToReturn)) ::
                 Button("Удалить", DeleteNotification(msgId, notificationId, commandToReturn)) :: Nil, Some(msgId))))
@@ -195,12 +197,12 @@ final case class NotificationBot[Msg: Message, F[_] : Monad](usersRepository: Us
   }
 
   private[this] def dateButton(day: LocalDateTime) = Button(
-    f"${day.getDayOfMonth}.${day.getMonthValue}%02d",
+    day.format(DateTimeFormatter.ofPattern("EEEE dd.MM", new Locale("ru"))),
     SelectNotificationDate(day.getDayOfMonth, day.getMonthValue)
   )
 
   private[this] def isUncertainTime =
-    systemDateTime.now.getHour >= 23 || systemDateTime.now.getHour <= 3
+    systemDateTime.now.getHour >= 23 && systemDateTime.now.getMinute >= 55 || systemDateTime.now.getHour <= 3
 
   private[this] def storeAndReply(user: User, message: Msg, text: String, time: LocalDateTime): F[Unit] = {
     for (_ <- notificationsRepository += OneTime(0, user.id, text, time, isActive = true);
@@ -211,14 +213,14 @@ final case class NotificationBot[Msg: Message, F[_] : Monad](usersRepository: Us
 
   private[this] def editPage(id: Int, user: User, message: Msg, skip: Int, take: Int): F[Unit] =
     for (notifications <- notificationsRepository(user, skip, take);
-         answer = show(notifications.contents);
-         _ <- sender.send(message.chatId, answer, pageToButtons(id, skip, take, notifications), Some(id)))
+         answer        =  show(notifications.contents);
+         _             <- sender.send(message.chatId, answer, pageToButtons(id, skip, take, notifications), Some(id)))
       yield ()
 
   private[this] def showPage(user: User, message: Msg, skip: Int, take: Int): F[Unit] =
     for (notifications <- notificationsRepository(user, skip, take);
-         answer = show(notifications.contents);
-         msgId <- sender.send(message.chatId, answer);
+         answer        =  show(notifications.contents);
+         msgId         <- sender.send(message.chatId, answer);
          _ <- sender.send(message.chatId, answer, pageToButtons(msgId, skip, take, notifications), Some(msgId)))
       yield ()
 

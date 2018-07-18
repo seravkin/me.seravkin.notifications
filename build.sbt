@@ -23,7 +23,7 @@ libraryDependencies ++= Seq(
   "org.typelevel" %% "cats-core" % "1.1.0",
   "org.typelevel" %% "cats-free" % "1.1.0",
   "org.typelevel" %% "cats-effect" % "1.0.0-RC2",
-  "default" %% "me-seravkin-tg-adapter" % "0.1",
+  "default" %% "me-seravkin-tg-adapter" % "0.1.1",
   "com.chuusai" %% "shapeless" % "2.3.3",
   "org.http4s" %% "http4s-dsl" % http4sVersion,
   "org.http4s" %% "http4s-blaze-server" % http4sVersion,

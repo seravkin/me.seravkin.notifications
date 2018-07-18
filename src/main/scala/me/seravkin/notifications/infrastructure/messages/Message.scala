@@ -24,6 +24,8 @@ object Message {
     def isPrivate: Boolean = ev.isPrivate(msg)
   }
 
+
+
   private object ArgumentParser extends RegexParsers {
 
     private[this] val stringInQuotes: Parser[String] = "\"(.+)\"".r map { _.replace("\"", "") }

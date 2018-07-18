@@ -17,14 +17,14 @@ import info.mukel.telegrambot4s.api.{Polling, RequestHandler, TelegramBot}
 import info.mukel.telegrambot4s.models.{CallbackQuery, ChatType, Message}
 import me.seravkin.notifications.domain.algebra.BotAlgebra.BotIO
 import me.seravkin.notifications.domain.parsing.CombinatorMomentInFutureParser
-import me.seravkin.notifications.infrastructure.interpreters.{ BotIOInterpreterK, BotOpInterpreter, ReaderInterpreter}
+import me.seravkin.notifications.infrastructure.interpreters.{BotIOInterpreterK, BotOpInterpreter, ReaderInterpreter}
 import me.seravkin.notifications.infrastructure.messages.BotIOSender
 import me.seravkin.notifications.infrastructure.state.BotIOChatStateRepository
 import me.seravkin.notifications.infrastructure.time.ActualSystemDateTime
 import me.seravkin.notifications.persistance.botio.{DoobieNotificationTasksRepository, DoobieNotificationsRepository, DoobieUsersRepository}
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
-import me.seravkin.notifications.bot.NotificationBot
+import me.seravkin.notifications.bot.{NotificationBot, NotificationEventBot}
 import me.seravkin.notifications.domain.services.NotificationTasksServiceImpl
 import me.seravkin.notifications.infrastructure.config.Configuration
 import me.seravkin.notifications.infrastructure.config.Configuration.NotificationConfiguration
@@ -40,6 +40,8 @@ import scala.util.{Failure, Success}
 
 object Main extends IOApp {
 
+  type MessageType[Msg] = me.seravkin.notifications.infrastructure.messages.Message[Msg]
+
   override def run(args: List[String]): IO[ExitCode] = for(
     config  <- Configuration.load();
     source  <- dataSource(config);
@@ -47,10 +49,17 @@ object Main extends IOApp {
     _       <- adapter.runSafe()
   ) yield ExitCode.Success
 
+  private[this] def botFor[T: MessageType]: NotificationBot[T, BotIO] = NotificationBot[T, BotIO](DoobieUsersRepository,
+    BotIOChatStateRepository,
+    BotIOSender,
+    CombinatorMomentInFutureParser,
+    DoobieNotificationsRepository,
+    ActualSystemDateTime)
+
 
   private[this] def create(config: NotificationConfiguration,
                            source: HikariDataSource,
-                           requestHandler: RequestHandler): Bot[IO] = {
+                           requestHandler: RequestHandler): IO[Bot[IO]] = {
     val service = NotificationTasksServiceImpl(
       ActualSystemDateTime,
       DoobieNotificationTasksRepository,
@@ -64,18 +73,15 @@ object Main extends IOApp {
           new RequestHandlerAdapter[IO](requestHandler)))
           .andThen[IO](new ReaderInterpreter(source.getConnection))
 
-    //TODO: constructor with IO for TelegramAdapter
-    global.scheduleWithFixedDelay(config.secondsForScheduler, config.secondsForScheduler, TimeUnit.SECONDS, () => {
-      interpreterK(service.sendNotificationsIfNeeded()).unsafeRunSync()
-    })
-
-    Kleisli(NotificationBot[BotEvent, BotIO](DoobieUsersRepository,
-      BotIOChatStateRepository,
-      BotIOSender,
-      CombinatorMomentInFutureParser,
-      DoobieNotificationsRepository,
-      ActualSystemDateTime))
-      .mapK(interpreterK)
+    IO {
+      global.scheduleWithFixedDelay(config.secondsForScheduler, config.secondsForScheduler, TimeUnit.SECONDS, () => {
+        interpreterK(service.sendNotificationsIfNeeded()).unsafeRunSync()
+      })
+    } >>
+    IO {
+      Kleisli(NotificationEventBot(botFor[Message], botFor[CallbackQuery]))
+        .mapK(interpreterK)
+    }
 
   }
 

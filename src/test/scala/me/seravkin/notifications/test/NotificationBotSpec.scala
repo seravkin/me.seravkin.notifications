@@ -105,7 +105,7 @@ class NotificationBotSpec extends FlatSpec with Matchers {
       MockSender,
       CombinatorMomentInFutureParser,
       MockNotificationRepository,
-      MockDateTime(LocalDateTime.of(2018,5,17,23,55)))
+      MockDateTime(LocalDateTime.of(2018,5,17,23,56)))
 
     def sendAtNight(text: String) =
       bot(MockMessage(-1, defaultUser, text))
@@ -115,7 +115,7 @@ class NotificationBotSpec extends FlatSpec with Matchers {
       _ <- sendAtNight("test wtf");
       _ <- sendAtNight("завтра в 12:00");
       m <- shouldAnswerWith(sentMessage)(predicate(_ == "Какая дата точно имелась в виду:",
-                                         hasButtonsWithNames("18.05", "19.05")));
+                                         hasButtonsWithNames("пятница 18.05", "суббота 19.05")));
       _ <- bot(MockMessage(-1, defaultUser, "", Some(m.buttons.last.command)))
     ) yield ()
 
