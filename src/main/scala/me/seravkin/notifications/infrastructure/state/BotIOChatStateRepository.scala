@@ -1,7 +1,7 @@
 package me.seravkin.notifications.infrastructure.state
 
 import cats.free.Free
-import me.seravkin.notifications.bot.NotificationBot.ChatState
+import me.seravkin.notifications.bot.ChatState
 import me.seravkin.notifications.domain.algebra.BotAlgebra.{BotIO, BotOp, Get, Set}
 
 object BotIOChatStateRepository extends ChatStateRepository[ChatState, BotIO] {

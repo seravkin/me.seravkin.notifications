@@ -5,19 +5,23 @@ import java.time.LocalDateTime
 import cats._
 import cats.data._
 import cats.syntax.all._
+import info.mukel.telegrambot4s.methods.SendMessage
+import info.mukel.telegrambot4s.models._
 import me.seravkin.notifications.bot.NotificationBot
-import me.seravkin.notifications.bot.NotificationBot.{ChatState, Nop}
+import me.seravkin.notifications.bot._
+import me.seravkin.notifications.bot.services.{NotificationChatServiceImpl, PageViewImpl}
 import me.seravkin.notifications.domain.Notifications.{Notification, OneTime, Recurrent}
-import me.seravkin.notifications.domain.User
+import me.seravkin.notifications.domain.PersistedUser
 import me.seravkin.notifications.domain.parsing.CombinatorMomentInFutureParser
 import me.seravkin.notifications.infrastructure.messages.{Button, Sender}
 import me.seravkin.notifications.infrastructure.state.ChatStateRepository
-import me.seravkin.notifications.infrastructure.time.ActualSystemDateTime
+import me.seravkin.notifications.infrastructure.time.{ActualSystemDateTime, SystemDateTime}
 import me.seravkin.notifications.persistance.NotificationsRepository
 import org.scalatest._
 import shapeless._
 import me.seravkin.notifications.test.mocks._
 import me.seravkin.tg.adapter.Bot
+import me.seravkin.tg.adapter.events._
 
 class NotificationBotSpec extends FlatSpec with Matchers {
 
@@ -55,7 +59,7 @@ class NotificationBotSpec extends FlatSpec with Matchers {
 
   it should "deny access for not authorized user" in {
     val dialogue = for(
-      _ <- send("/help", User(2, Some(2), "2"));
+      _ <- send("/help", User(2, false,"2", username = Some("2")));
       _ <- shouldAnswerWith(sentMessage)(hasExpected("Пользователь не аутентифицирован для данного сервиса"))
     ) yield ()
 
@@ -99,16 +103,10 @@ class NotificationBotSpec extends FlatSpec with Matchers {
   }
   
   it should "ask exact date if notification was requested before 00:00" in {
-    val bot = NotificationBot[MockMessage, State[MockBotState, ?]](
-      MockUsersRepository(defaultUser),
-      MockChatStateRepository,
-      MockSender,
-      CombinatorMomentInFutureParser,
-      MockNotificationRepository,
-      MockDateTime(LocalDateTime.of(2018,5,17,23,56)))
+    val bot = createBot(MockDateTime(LocalDateTime.of(2018,5,17,23,56)))
 
     def sendAtNight(text: String) =
-      bot(MockMessage(-1, defaultUser, text))
+      bot(ReceiveMessage(Message(-1, Some(defaultTgUser), 0, Chat(1, ChatType.Private), text = Some(text))))
 
     val dialogue = for(
       _ <- sendAtNight("/in");
@@ -116,7 +114,7 @@ class NotificationBotSpec extends FlatSpec with Matchers {
       _ <- sendAtNight("завтра в 12:00");
       m <- shouldAnswerWith(sentMessage)(predicate(_ == "Какая дата точно имелась в виду:",
                                          hasButtonsWithNames("пятница 18.05", "суббота 19.05")));
-      _ <- bot(MockMessage(-1, defaultUser, "", Some(m.buttons.last.command)))
+      _ <- sendCallback(m.buttons.last.command)
     ) yield ()
 
     val (state, _) = dialogue
@@ -216,9 +214,9 @@ class NotificationBotSpec extends FlatSpec with Matchers {
       _ <- send("/in \"test 4\" завтра в 12:00");
       _ <- send("/list");
       m <- shouldAnswerWith(sentMessage)(predicate(_.contains("test 3"), hasRightButton));
-      _ <- bot(MockMessage(-1, defaultUser, "", m.buttons.find(_.name == "->").map(_.command)));
+      _ <- sendCallback(m.buttons.find(_.name == "->").map(_.command).get);
       n <- shouldAnswerWith(editOfMessage(m.id))(predicate(_.contains("test 4"), hasLeftButton));
-      _ <- bot(MockMessage(-1, defaultUser, "", n.buttons.find(_.name == "<-").map(_.command)));
+      _ <- sendCallback(n.buttons.find(_.name == "<-").map(_.command).get);
       _ <- shouldAnswerWith(editOfMessage(m.id))(predicate(_.contains("test 3"), hasRightButton))
     ) yield ()
 
@@ -238,9 +236,9 @@ class NotificationBotSpec extends FlatSpec with Matchers {
       _ <- send("/in \"test 5\" завтра в 12:00");
       _ <- send("/list");
       m <- shouldAnswerWith(sentMessage)(predicate(_.contains("test 3"), hasNavigationButtons));
-      _ <- bot(MockMessage(-1, defaultUser, "", m.buttons.find(_.name == "1").map(_.command)));
+      _ <- sendCallback(m.buttons.find(_.name == "1").map(_.command).get);
       n <- shouldAnswerWith(editOfMessage(m.id))(predicate(_.contains("Редактирование: test 1"), hasEditButtons));
-      _ <- bot(MockMessage(-1, defaultUser, "", n.buttons.find(_.name == "Назад").map(_.command)));
+      _ <- sendCallback(n.buttons.find(_.name == "Назад").map(_.command).get);
       _ <- shouldAnswerWith(editOfMessage(m.id))(predicate(_.contains("test 3"), hasNavigationButtons))
     ) yield ()
 
@@ -261,9 +259,9 @@ class NotificationBotSpec extends FlatSpec with Matchers {
       _ <- send("/in \"test 5\" завтра в 12:00");
       _ <- send("/list");
       m <- shouldAnswerWith(sentMessage)(predicate(_.contains("test 3"), hasNavigationButtons));
-      _ <- bot(MockMessage(-1, defaultUser, "", m.buttons.find(_.name == "1").map(_.command)));
+      _ <- sendCallback( m.buttons.find(_.name == "1").map(_.command).get);
       n <- shouldAnswerWith(editOfMessage(m.id))(predicate(_.contains("Редактирование: test 1"), hasEditButtons));
-      _ <- bot(MockMessage(-1, defaultUser, "", n.buttons.find(_.name == "Перенести").map(_.command)));
+      _ <- sendCallback(n.buttons.find(_.name == "Перенести").map(_.command).get);
       _ <- shouldAnswerWith(sentMessage)(predicate(_.contains("Введите желаемое время для переноса напоминания:")))
     ) yield ()
 
@@ -283,9 +281,9 @@ class NotificationBotSpec extends FlatSpec with Matchers {
       _ <- send("/in \"test 5\" завтра в 12:00");
       _ <- send("/list");
       m <- shouldAnswerWith(sentMessage)(predicate(_.contains("test 3"), hasNavigationButtons));
-      _ <- bot(MockMessage(-1, defaultUser, "", m.buttons.find(_.name == "1").map(_.command)));
+      _ <- sendCallback(m.buttons.find(_.name == "1").map(_.command).get);
       n <- shouldAnswerWith(editOfMessage(m.id))(predicate(_.contains("Редактирование: test 1"), hasEditButtons));
-      _ <- bot(MockMessage(-1, defaultUser, "", n.buttons.find(_.name == "Удалить").map(_.command)));
+      _ <- sendCallback(n.buttons.find(_.name == "Удалить").map(_.command).get);
       _ <- shouldAnswerWith(editOfMessage(m.id))(predicate(x => x != "test 1", hasNavigationButtons))
 
     ) yield ()
@@ -341,9 +339,14 @@ class NotificationBotSpec extends FlatSpec with Matchers {
     dialogue.run(MockBotState(users = defaultUser :: Nil)).value
   }
 
+  private[this] def sendCallback(command: String, user: User = defaultTgUser) =
+    bot(ReceiveCallbackQuery(CallbackQuery("-1", defaultTgUser,
+      Some(Message(-1, Some(user), 0, Chat(1, ChatType.Private))),
+      chatInstance = "",
+      data = Some(command))))
 
-  private[this] def send(text: String, user: User = defaultUser) =
-    bot(MockMessage(-1, user, text))
+  private[this] def send(text: String, user: User = defaultTgUser) =
+    bot(ReceiveMessage(Message(-1, Some(user), 0, Chat(1, ChatType.Private), text = Some(text))))
 
   private[this] def editOfMessage(id: Int)(list: List[MockMessage]): MockMessage = {
     list.exists(_.id == id) should be (true)
@@ -378,7 +381,8 @@ class NotificationBotSpec extends FlatSpec with Matchers {
   private[this] def shouldAnswerWithTextThat(f: String => Boolean) =
     shouldAnswerWith(sentMessage)(predicate(f))
 
-  private[this] val defaultUser = User(1, Some(1), "test")
+  private[this] val defaultUser = PersistedUser(1, Some(1), "test")
+  private[this] val defaultTgUser = User(1, false, "1",username = Some("test"))
   private[this] val defaultUserId = defaultUser.id
   private[this] val mockedDateTime = MockDateTime(LocalDateTime.of(2018, 8, 22, 12, 0, 0))
 
@@ -397,13 +401,27 @@ class NotificationBotSpec extends FlatSpec with Matchers {
     Recurrent(5, defaultUserId + 1, "asdasd", LocalDateTime.now(), LocalDateTime.now(), true)
   )
 
-  private[this] val bot =
-    NotificationBot[MockMessage, State[MockBotState, ?]](
+  private[this] def createBot(systemDateTime: SystemDateTime): NotificationBot[State[MockBotState, ?]] =
+    NotificationBot[State[MockBotState, ?]](
       MockUsersRepository(defaultUser),
       MockChatStateRepository,
       MockSender,
       CombinatorMomentInFutureParser,
       MockNotificationRepository,
-      mockedDateTime)
+      new NotificationChatServiceImpl[State[MockBotState, ?]](
+        MockNotificationRepository,
+        MockUsersRepository(defaultUser),
+        MockChatStateRepository,
+        CombinatorMomentInFutureParser,
+        systemDateTime,
+        MockSender
+      ),
+      new PageViewImpl[State[MockBotState, ?]](
+        MockNotificationRepository,
+        MockSender
+      ),
+      systemDateTime)
+
+  private[this] val bot = createBot(mockedDateTime)
 
 }

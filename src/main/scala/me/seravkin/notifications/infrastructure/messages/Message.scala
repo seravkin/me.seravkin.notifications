@@ -3,28 +3,7 @@ package me.seravkin.notifications.infrastructure.messages
 import scala.util.Try
 import scala.util.parsing.combinator.RegexParsers
 
-trait Message[Msg] {
-  def username(msg: Msg): Option[String]
-
-  def text(msg: Msg): Option[String]
-
-  def chatId(msg: Msg): Long
-
-  def isPrivate(msg: Msg): Boolean
-
-  def data(msg: Msg): Option[String]
-}
-
 object Message {
-  implicit class MessageOps[Msg](msg: Msg)(implicit ev: Message[Msg]) {
-    def username: Option[String] = ev.username(msg)
-    def text: Option[String] = ev.text(msg)
-    def chatId: Long = ev.chatId(msg)
-    def data: Option[String] = ev.data(msg)
-    def isPrivate: Boolean = ev.isPrivate(msg)
-  }
-
-
 
   private object ArgumentParser extends RegexParsers {
 
@@ -61,16 +40,6 @@ object Message {
         None
       else
         Some(arg.reduce(_ + " " + _))
-  }
-
-  object ContainsData {
-    def unapply[Msg: Message](arg: Msg): Option[String] =
-      arg.data
-  }
-
-  object ContainsText {
-    def unapply[Msg: Message](arg: Msg): Option[String] =
-      arg.text
   }
 
   object IsLong {

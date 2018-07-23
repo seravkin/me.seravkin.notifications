@@ -17,7 +17,7 @@ case class NotificationTasksServiceImpl[F[_]: Monad](systemDateTime: SystemDateT
                                                      sender: Sender[F]) extends NotificationTasksService[F] {
 
   private[this] def sendTask(notificationTask: NotificationTask): F[Unit] =
-    sender.send(
+    sender.ask(
       notificationTask.chatId,
       notificationTask.text,
       Button("Перенести", ChangeNotificationTime(notificationTask.id)) :: Nil) >> ().pure[F]

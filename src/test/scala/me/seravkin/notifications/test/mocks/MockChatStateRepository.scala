@@ -2,7 +2,7 @@ package me.seravkin.notifications.test.mocks
 
 import cats.data.State
 import cats.syntax.all._
-import me.seravkin.notifications.bot.NotificationBot.ChatState
+import me.seravkin.notifications.bot.ChatState
 import me.seravkin.notifications.infrastructure.state.ChatStateRepository
 import me.seravkin.notifications.test.mocks.MockBotState._
 

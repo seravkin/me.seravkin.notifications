@@ -8,7 +8,7 @@ import cats._
 import cats.implicits._
 import me.seravkin.notifications.domain.Notifications.{Notification, OneTime}
 import me.seravkin.notifications.domain.algebra.BotAlgebra.BotIO
-import me.seravkin.notifications.domain.{Notifications, User}
+import me.seravkin.notifications.domain.{Notifications, PersistedUser}
 import me.seravkin.notifications.persistance.{NotificationsRepository, Page, botio}
 
 
@@ -28,7 +28,7 @@ object DoobieNotificationsRepository extends NotificationsRepository[BotIO] with
   }
 
 
-  override def apply(user: User): BotIO[List[Notifications.Notification]] = botIO {
+  override def apply(user: PersistedUser): BotIO[List[Notifications.Notification]] = botIO {
     sql"SELECT id, id_user, text, dt_to_notificate, is_active FROM notifications WHERE is_active = TRUE AND id_user = ${user.id}"
       .read[OneTime]
       .toList
@@ -59,19 +59,19 @@ object DoobieNotificationsRepository extends NotificationsRepository[BotIO] with
     }
   }
 
-  private[this] def activeNotificationsCount(user: User): BotIO[Int] = botIO {
+  private[this] def activeNotificationsCount(user: PersistedUser): BotIO[Int] = botIO {
     sql"SELECT count(id) from notifications where is_active = TRUE AND id_user = ${user.id}"
       .query[Int]
       .unique
   }
 
-  private[this] def pageOfNotifications(user: User, skip: Int, take: Int): BotIO[List[OneTime]] = botIO {
+  private[this] def pageOfNotifications(user: PersistedUser, skip: Int, take: Int): BotIO[List[OneTime]] = botIO {
     sql"SELECT id, id_user, text, dt_to_notificate, is_active FROM notifications WHERE is_active = TRUE AND id_user = ${user.id} ORDER BY dt_to_notificate DESC LIMIT $take OFFSET $skip"
       .read[OneTime]
       .toList
   }
 
-  override def apply(user: User, skip: Int, take: Int): BotIO[Page[Notification]] = for(
+  override def apply(user: PersistedUser, skip: Int, take: Int): BotIO[Page[Notification]] = for(
     count   <- activeNotificationsCount(user);
     entries <- pageOfNotifications(user, skip, take)
   ) yield Page(entries, skip != 0, count > skip + entries.length)

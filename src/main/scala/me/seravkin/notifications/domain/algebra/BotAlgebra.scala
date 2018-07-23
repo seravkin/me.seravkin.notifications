@@ -2,8 +2,7 @@ package me.seravkin.notifications.domain.algebra
 
 import cats.free.Free
 import doobie.free.connection.ConnectionIO
-import info.mukel.telegrambot4s.models.ChatId
-import me.seravkin.notifications.bot.NotificationBot.ChatState
+import me.seravkin.notifications.bot.ChatState
 import me.seravkin.notifications.infrastructure.messages.Button
 
 object BotAlgebra {

@@ -1,11 +1,13 @@
 package me.seravkin.notifications.test.mocks
 
-import me.seravkin.notifications.bot.NotificationBot.{ChatState, Nop}
+import info.mukel.telegrambot4s.models.Message
+import me.seravkin.notifications.bot.{ChatState, Nop}
 import me.seravkin.notifications.domain.Notifications.Notification
-import me.seravkin.notifications.domain.User
+import me.seravkin.notifications.domain.PersistedUser
+import me.seravkin.tg.adapter.events.BotEvent
 import shapeless._
 
-final case class MockBotState(users: List[User] = Nil,
+final case class MockBotState(users: List[PersistedUser] = Nil,
                               notifications: List[Notification] = Nil,
                               sentMessages: List[MockMessage] = Nil,
                               chatState: ChatState = Nop)

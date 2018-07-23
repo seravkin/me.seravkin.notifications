@@ -11,7 +11,7 @@ import doobie.util.transactor.Transactor
 import info.mukel.telegrambot4s.api.RequestHandler
 import info.mukel.telegrambot4s.methods.{EditMessageText, SendMessage}
 import info.mukel.telegrambot4s.models.{InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMarkup}
-import me.seravkin.notifications.bot.NotificationBot.{ChatState, Nop}
+import me.seravkin.notifications.bot.{ChatState, Nop}
 import me.seravkin.notifications.domain.algebra.BotAlgebra._
 import me.seravkin.notifications.infrastructure.messages.Button
 import me.seravkin.tg.adapter.requests.RequestHandlerF
