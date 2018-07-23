@@ -4,7 +4,7 @@ import cats._
 import cats.data.OptionT
 import cats.implicits._
 import info.mukel.telegrambot4s.models.CallbackQuery
-import me.seravkin.notifications.bot.commands.{ChangeNotificationTimeAndMenu, DeleteNotification, OpenNotificationMenu, SelectNotificationDate}
+import me.seravkin.notifications.bot.commands._
 import me.seravkin.notifications.bot.services.NotificationChatService
 import me.seravkin.notifications.domain.PersistedUser
 import me.seravkin.notifications.domain.parsing.MomentInFutureParser
@@ -30,14 +30,6 @@ object InCallbackHandler {
         .storeAndReply(user, chatId,
           text, moment.toExecutionTime(systemDateTime.now.withMonth(month).withDayOfMonth(day)))
 
-    case HasMessage(message@ContainsData(OpenNotificationMenu(msgId, notificationId, commandToReturn))) =>
-      (for (notification <- OptionT(notificationsRepository(notificationId));
-            id           <- OptionT.fromOption[F](message.message.map(_.chat.id));
-            _            <- OptionT.liftF(sender.ask(id, s"Редактирование: ${notification.text}",
-              Button("Назад", commandToReturn) ::
-                Button("Перенести", ChangeNotificationTimeAndMenu(msgId, notificationId, commandToReturn)) ::
-                Button("Удалить", DeleteNotification(msgId, notificationId, commandToReturn)) :: Nil, Some(msgId))))
-        yield ()).getOrElseF(Monad[F].unit)
 
   }
 

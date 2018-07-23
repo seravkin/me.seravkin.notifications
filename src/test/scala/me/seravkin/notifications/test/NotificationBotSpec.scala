@@ -227,9 +227,6 @@ class NotificationBotSpec extends FlatSpec with Matchers {
 
   it should "show list command with buttons that open message edit menu" in {
 
-    val hasNavigationButtons = hasButtonsWithNames("1","2","3", "->")(_)
-    val hasEditButtons = hasButtonsWithNames("Назад", "Перенести", "Удалить")(_)
-
     val dialogue = for(
       _ <- send("/in \"test 3\" сегодня в 22:00");
       _ <- send("/in \"test 4\" завтра в 12:00");
@@ -249,10 +246,6 @@ class NotificationBotSpec extends FlatSpec with Matchers {
 
   it should "show edit menu and allow notification date change" in {
 
-
-    val hasNavigationButtons = hasButtonsWithNames("1","2","3", "->")(_)
-    val hasEditButtons = hasButtonsWithNames("Назад", "Перенести", "Удалить")(_)
-
     val dialogue = for(
       _ <- send("/in \"test 3\" сегодня в 22:00");
       _ <- send("/in \"test 4\" завтра в 12:00");
@@ -270,10 +263,31 @@ class NotificationBotSpec extends FlatSpec with Matchers {
       .value
   }
 
+  it should "show edit menu and allow notification text change" in {
+
+    val dialogue = for(
+      _ <- send("/in \"test 3\" сегодня в 22:00");
+      _ <- send("/in \"test 4\" завтра в 12:00");
+      _ <- send("/in \"test 5\" завтра в 12:00");
+      _ <- send("/list");
+      m <- shouldAnswerWith(sentMessage)(predicate(_.contains("test 3"), hasNavigationButtons));
+      _ <- sendCallback( m.buttons.find(_.name == "1").map(_.command).get);
+      n <- shouldAnswerWith(editOfMessage(m.id))(predicate(_.contains("Редактирование: test 1"), hasEditButtons));
+      _ <- sendCallback(n.buttons.find(_.name == "Изменить").map(_.command).get);
+      _ <- shouldAnswerWith(sentMessage)(predicate(_.contains("Введите желаемый текст для напоминания:")));
+      _ <- send("TEST123");
+      _ <- shouldAnswerWith(sentMessage)(predicate(_.contains("Текст напоминания изменен")));
+      _ <- send("/list");
+      _ <- shouldAnswerWith(sentMessage)(predicate(_.contains("TEST123")))
+    ) yield ()
+
+    dialogue
+      .run(MockBotState(defaultUser :: Nil, notifications = existingNotifications.toList))
+      .value
+  }
+
   it should "show edit menu and allow notification delete" in {
 
-    val hasNavigationButtons = hasButtonsWithNames("1","2","3", "->")(_)
-    val hasEditButtons = hasButtonsWithNames("Назад", "Перенести", "Удалить")(_)
 
     val dialogue = for(
       _ <- send("/in \"test 3\" сегодня в 22:00");
@@ -385,6 +399,9 @@ class NotificationBotSpec extends FlatSpec with Matchers {
   private[this] val defaultTgUser = User(1, false, "1",username = Some("test"))
   private[this] val defaultUserId = defaultUser.id
   private[this] val mockedDateTime = MockDateTime(LocalDateTime.of(2018, 8, 22, 12, 0, 0))
+
+  private[this] val hasNavigationButtons = hasButtonsWithNames("1","2","3", "->")(_)
+  private[this] val hasEditButtons = hasButtonsWithNames("Назад", "Перенести", "Изменить","Удалить")(_)
 
   private[this] val helpText = "Бот c напоминаниями\n" +
     "/in - Напоминает о событии через заданный интервал времени\n" +

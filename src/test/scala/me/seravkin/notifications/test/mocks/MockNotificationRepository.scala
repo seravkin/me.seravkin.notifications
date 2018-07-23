@@ -30,6 +30,15 @@ object MockNotificationRepository extends NotificationsRepository[State[MockBotS
     case recurrent: Recurrent => recurrent.copy(isActive = false)
   }
 
+  private def changeTextById(id: Long, text: String)(notification: Notification): Notification = notification match {
+    case _ if id != notification.id => notification
+    case oneTime: OneTime => oneTime.copy(text = text)
+    case recurrent: Recurrent => recurrent.copy(text = text)
+  }
+
   override def deactivate(ids: List[Long]): State[MockBotState, Unit] =
     State.modify[MockBotState](notifications.modify(_)(_.map(changeIsActive(ids.toSet))))
+
+  override def update(id: Long, text: String): State[MockBotState, Unit] =
+    State.modify[MockBotState](notifications.modify(_)(_.map(changeTextById(id, text))))
 }

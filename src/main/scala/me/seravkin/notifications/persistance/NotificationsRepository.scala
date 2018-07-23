@@ -12,4 +12,6 @@ trait NotificationsRepository[F[_]] {
   def +=[T <: Notification](t: T): F[T]
 
   def deactivate(ids: List[Long]): F[Unit]
+
+  def update(id: Long, text: String): F[Unit]
 }

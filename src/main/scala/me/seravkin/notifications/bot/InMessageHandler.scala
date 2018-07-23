@@ -11,12 +11,14 @@ import me.seravkin.notifications.domain.PersistedUser
 import me.seravkin.notifications.infrastructure.messages.{Button, Sender}
 import me.seravkin.notifications.infrastructure.messages.Message.{CommandWithQuotedArgs, TailAsText}
 import me.seravkin.notifications.infrastructure.state.ChatStateRepository
+import me.seravkin.notifications.persistance.NotificationsRepository
 import me.seravkin.tg.adapter.matching._
 
 object InMessageHandler {
   def apply[F[_]: Monad](user: PersistedUser,
                          chatStateRepository: ChatStateRepository[ChatState, F],
                          notificationChatService: NotificationChatService[F],
+                         notificationsRepository: NotificationsRepository[F],
                          sender: Sender[F]): BotHandler[Message, F] = {
 
     case HasMessage(message@ContainsText("/in")) =>
@@ -39,6 +41,12 @@ object InMessageHandler {
 
     case HasMessage(message@ContainsText(CommandWithQuotedArgs("/in", text :: TailAsText(notification)))) =>
       notificationChatService.tryStore(user, message.chat.id, text, notification)
+
+    case (InControlWaitingForTextEdit(nId), message@ContainsText(text)) =>
+      notificationsRepository.update(nId, text) >>
+      chatStateRepository.set(message.chat.id, Nop) >>
+      sender.ask(message.chat.id, "Текст напоминания изменен") >>
+      Monad[F].unit
 
   }
 

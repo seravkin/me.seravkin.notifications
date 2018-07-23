@@ -76,4 +76,10 @@ object DoobieNotificationsRepository extends NotificationsRepository[BotIO] with
     entries <- pageOfNotifications(user, skip, take)
   ) yield Page(entries, skip != 0, count > skip + entries.length)
 
+  override def update(id: Long, text: String): BotIO[Unit] = botIO {
+    sql"UPDATE notifications SET text = $text WHERE id = $id"
+      .update
+      .run
+      .map(_ => ())
+  }
 }
