@@ -29,18 +29,20 @@ final class NotificationChatServiceImpl[F[_]: Monad](notificationsRepository: No
           user         <- OptionT(usersRepository(notification.userId));
           chatId       <- OptionT.fromOption[F](user.chatId);
           _            <- OptionT.liftF(chatStateRepository.set(chatId, InControlWaitingForTime(chatId, notification.text)));
-          _            <- OptionT.liftF(sender.ask(chatId, "Введите желаемое время для переноса напоминания:")))
-      yield ()).getOrElseF(sender.ask(chatId, s"Напоминание с id $notificationId не найдено") >> Monad[F].unit)
+          _            <- OptionT.liftF(sender.tell(chatId, "Введите желаемое время для переноса напоминания:")))
+      yield ()).getOrElseF(sender.tell(chatId, s"Напоминание с id $notificationId не найдено"))
   }
 
   override def tryStore(user: PersistedUser, chatId: Long, text: String, notification: String): F[Unit] = {
     momentInFutureParser.parseMomentInFuture(notification) match {
 
       case Right(momentInFuture) if momentInFuture.isRelativeToDate && isUncertainTime =>
-        val today = momentInFuture.toExecutionTime(systemDateTime.now)
-        val tomorrow = momentInFuture.toExecutionTime(systemDateTime.now.plusDays(1))
+        val delta = if(systemDateTime.now.getHour < 12) -1 else 0
 
-        for (_ <- sender.ask(chatId, "Какая дата точно имелась в виду:", dateButton(today) :: dateButton(tomorrow) :: Nil);
+        val today = momentInFuture.toExecutionTime(systemDateTime.now.plusDays(delta))
+        val tomorrow = momentInFuture.toExecutionTime(systemDateTime.now.plusDays(1 + delta))
+
+        for (_ <- sender.tell(chatId, "Какая дата точно имелась в виду:", dateButton(today) :: dateButton(tomorrow) :: Nil);
              _ <- chatStateRepository.set(chatId, InControlWaitingForConfirmation(chatId, text, notification)))
           yield ()
 

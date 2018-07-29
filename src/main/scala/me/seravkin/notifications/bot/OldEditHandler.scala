@@ -16,8 +16,7 @@ object OldEditHandler {
 
     case HasMessage(message@ContainsText(CommandWithArgs("/delete", IsLong(id) :: Nil))) =>
       notificationsRepository.deactivate(id :: Nil) >>
-      sender.ask(message.chat.id, "Напоминание удалено") >>
-      Monad[F].unit
+      sender.tell(message.chat.id, "Напоминание удалено")
 
     case HasMessage(message@ContainsText(CommandWithArgs("/change", IsLong(id) :: Nil))) =>
       notificationChatService.changeNotificationDate(message.chat.id, id)

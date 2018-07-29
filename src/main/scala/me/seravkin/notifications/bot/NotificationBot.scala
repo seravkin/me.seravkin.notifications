@@ -39,8 +39,7 @@ final case class NotificationBot[F[_] : Monad](usersRepository: UsersRepository[
         case Some((state, user)) =>
           processMessage(user)(state, message)
         case _ =>
-          sender.ask(message.chat.id, "Пользователь не аутентифицирован для данного сервиса") >>
-          Monad[F].unit
+          sender.tell(message.chat.id, "Пользователь не аутентифицирован для данного сервиса")
       }
     case ReceiveCallbackQuery(query) if query.message.exists(_.chat.`type` == ChatType.Private) =>
       authenticate(query.from.username, query.message.map(_.chat.id)).flatMap {

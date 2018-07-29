@@ -25,4 +25,7 @@ object MockSender extends Sender[State[MockBotState, ?]] {
       ) yield newId
     }
 
+  override def tell(chatId: Long, text: String, buttonWithCommand: List[Button] = Nil, idToEdit: Option[Int] = None): State[MockBotState, Unit] =
+    ask(chatId, text, buttonWithCommand, idToEdit).map(_ => ())
+
 }

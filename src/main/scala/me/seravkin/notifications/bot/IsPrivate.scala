@@ -10,6 +10,5 @@ object IsPrivate {
     if(message.chat.`type` == ChatType.Private)
       f(message)
     else
-      sender.ask(message.chat.id, "Бот поддерживает только приватные беседы ") >>
-      Monad[F].unit
+      sender.tell(message.chat.id, "Бот поддерживает только приватные беседы ")
 }

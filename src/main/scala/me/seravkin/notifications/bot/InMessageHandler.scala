@@ -23,18 +23,15 @@ object InMessageHandler {
 
     case HasMessage(message@ContainsText("/in")) =>
       chatStateRepository.set(message.chat.id, InControlWaitingForText) >>
-        sender.ask(message.chat.id, "Введите напоминание:") >>
-        Monad[F].unit
+      sender.tell(message.chat.id, "Введите напоминание:")
 
     case (s, message@ContainsText("/exit")) if s != Nop =>
       chatStateRepository.set(message.chat.id, Nop) >>
-      sender.ask(message.chat.id, "Создание напоминания отменено") >>
-      Monad[F].unit
+      sender.tell(message.chat.id, "Создание напоминания отменено")
 
     case (InControlWaitingForText, message@ContainsText(text)) =>
       chatStateRepository.set(message.chat.id, InControlWaitingForTime(message.chat.id, text)) >>
-      sender.ask(message.chat.id, "Введите желаемое время:") >>
-      Monad[F].unit
+      sender.tell(message.chat.id, "Введите желаемое время:")
 
     case (s@InControlWaitingForTime(chatId, text), message@ContainsText(time)) =>
       notificationChatService.tryStore(user, message.chat.id, text, time);
@@ -45,8 +42,7 @@ object InMessageHandler {
     case (InControlWaitingForTextEdit(nId), message@ContainsText(text)) =>
       notificationsRepository.update(nId, text) >>
       chatStateRepository.set(message.chat.id, Nop) >>
-      sender.ask(message.chat.id, "Текст напоминания изменен") >>
-      Monad[F].unit
+      sender.tell(message.chat.id, "Текст напоминания изменен")
 
   }
 

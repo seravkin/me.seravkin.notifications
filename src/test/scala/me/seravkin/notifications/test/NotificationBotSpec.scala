@@ -126,6 +126,30 @@ class NotificationBotSpec extends FlatSpec with Matchers {
     date.getDayOfMonth should be (20)
   }
 
+  it should "ask exact date if notification was requested after 00:00" in {
+    val bot = createBot(MockDateTime(LocalDateTime.of(2018,5,18,0,20)))
+
+    def sendAtNight(text: String) =
+      bot(ReceiveMessage(Message(-1, Some(defaultTgUser), 0, Chat(1, ChatType.Private), text = Some(text))))
+
+    val dialogue = for(
+      _ <- sendAtNight("/in");
+      _ <- sendAtNight("test wtf");
+      _ <- sendAtNight("завтра в 12:00");
+      m <- shouldAnswerWith(sentMessage)(predicate(_ == "Какая дата точно имелась в виду:",
+        hasButtonsWithNames("пятница 18.05", "суббота 19.05")));
+      _ <- sendCallback(m.buttons.last.command)
+    ) yield ()
+
+    val (state, _) = dialogue
+      .run(MockBotState(defaultUser :: Nil, notifications = existingNotifications.toList))
+      .value
+
+    val OneTime(_, _, "test wtf", date, true) = state.notifications.last
+
+    date.getDayOfMonth should be (20)
+  }
+
   it should "try asking user again if request is incorrect and request is multiline" in {
     val dialogue = for(
       _  <- send("/in");

@@ -18,11 +18,9 @@ object HelpHandler {
 
   def apply[F[_]: Monad](sender: Sender[F]): BotHandler[Message, F] = {
     case HasMessage(message@ContainsText("/help")) =>
-      sender.ask(message.chat.id, HELP_TEXT) >>
-      Monad[F].unit
+      sender.tell(message.chat.id, HELP_TEXT)
 
     case HasMessage(message@ContainsText("/start")) =>
-      sender.ask(message.chat.id, HELP_TEXT) >>
-      Monad[F].unit
+      sender.tell(message.chat.id, HELP_TEXT)
   }
 }
