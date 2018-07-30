@@ -20,13 +20,14 @@ import me.seravkin.notifications.infrastructure.time.SystemDateTime
 import me.seravkin.notifications.persistance.{NotificationsRepository, Page, UsersRepository}
 import me.seravkin.notifications.bot.commands._
 import me.seravkin.notifications.bot.services.{NotificationChatService, PageView}
+import me.seravkin.notifications.domain.interpreter.NotificationPrototype
 import me.seravkin.tg.adapter._
 import me.seravkin.tg.adapter.events._
 
 final case class NotificationBot[F[_] : Monad](usersRepository: UsersRepository[F],
                                                              chatStateRepository: ChatStateRepository[ChatState, F],
                                                              sender: Sender[F],
-                                                             momentInFutureParser: MomentInFutureParser,
+                                                             momentInFutureParser: MomentInFutureParser[NotificationPrototype[F]],
                                                              notificationsRepository: NotificationsRepository[F],
                                                              notificationChatService: NotificationChatService[F],
                                                              pageView: PageView[F],

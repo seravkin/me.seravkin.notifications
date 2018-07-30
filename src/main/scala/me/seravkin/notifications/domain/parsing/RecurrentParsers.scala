@@ -4,14 +4,15 @@ import me.seravkin.notifications.domain.internationalization.Words.{Every, Every
 
 import scala.util.parsing.combinator.RegexParsers
 
-trait RecurrentParsers { this: TimeConstants with CommonParsers with RegexParsers with HasInternationalization =>
+trait RecurrentParsers[T, R] { this: TimeConstants with CommonParsers[T] with RegexParsers with HasInternationalization with HasRecurrentAst[R] =>
 
-  def everyday: Parser[Recurrent] = anyOf(EveryDayIn) ~ formattedTime ^^
-    { case _ ~ FormattedTime(hours, minutes) => InTime(hours, minutes) }
+  def everyday: Parser[R] = anyOf(EveryDayIn) ~ validatedTime ^^
+    { case _ ~ pair => recurrentAst.inTime(pair._1, pair._2) }
 
-  def everyDayOfWeek: Parser[Recurrent] = anyOf(Every) ~ days ~ anyOf(In) ~ formattedTime ^^
-    { case _ ~ d ~ _ ~ FormattedTime(hours, minutes) => EveryDaysOfWeek(d, InTime(hours, minutes)) }
+  def everyDayOfWeek: Parser[R] = anyOf(Every) ~ days ~ anyOf(In) ~ validatedTime ^^
+    { case _ ~ d ~ _ ~ pair =>
+      recurrentAst.everyDayOfWeek(d, recurrentAst.inTime(pair._1, pair._2)) }
 
-  def recurrent: Parser[Recurrent] = everyday | everyDayOfWeek
+  def recurrent: Parser[R] = everyday | everyDayOfWeek
 
 }

@@ -4,16 +4,17 @@ import me.seravkin.notifications.domain.internationalization.Words.{CurrentTime,
 
 import scala.util.parsing.combinator.RegexParsers
 
-trait TimeParsers { this: CommonParsers with TimeConstants with DateParsers with RegexParsers with HasInternationalization =>
+trait TimeParsers[T] { this: CommonParsers[T] with TimeConstants with DateParsers[T] with RegexParsers with HasInternationalization with HasMomentInFutureAst[T] =>
 
-  def inSameTime: Parser[Time] = anyOf(CurrentTime) ^^ { _ => InCurrentTime }
+  def inSameTime: Parser[T] = anyOf(CurrentTime) ^^ { _ => momentInFutureAst.inCurrentTime }
 
-  def time: Parser[Time] = formattedTime | inSameTime
+  def time: Parser[T] = formattedTime | inSameTime
 
-  def timePeriods: Parser[Time] = periods ^^ { AtFuzzyTime }
+  def timePeriods: Parser[T] = periods ^^ { momentInFutureAst.fuzzyTime }
 
-  def inAndTime: Parser[Time] = formattedTime | timePeriods | (anyOf(In) ~ time ^^ { case _ ~ t => t })
+  def inAndTime: Parser[T] = formattedTime | timePeriods | (anyOf(In) ~ time ^^ { case _ ~ t => t })
 
-  def inTime: Parser[MomentInFuture] = (date.? ~ inAndTime) ^^  { case day ~ time => FromFormattedDate(day.getOrElse(InDays(0)), time) }
+  def inTime: Parser[T] = (date.? ~ inAndTime) ^^  { case day ~ time =>
+    momentInFutureAst.dateAndTime(day.getOrElse(momentInFutureAst.inDays(0)), time) }
 
 }

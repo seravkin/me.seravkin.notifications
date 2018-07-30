@@ -12,8 +12,10 @@ import me.seravkin.notifications.bot._
 import me.seravkin.notifications.bot.services.{NotificationChatServiceImpl, PageViewImpl}
 import me.seravkin.notifications.domain.Notifications.{Notification, OneTime, Recurrent}
 import me.seravkin.notifications.domain.PersistedUser
+import me.seravkin.notifications.domain.interpreter.MomentInFutureAstToF
 import me.seravkin.notifications.domain.parsing.CombinatorMomentInFutureParser
 import me.seravkin.notifications.infrastructure.messages.{Button, Sender}
+import me.seravkin.notifications.infrastructure.random.Random
 import me.seravkin.notifications.infrastructure.state.ChatStateRepository
 import me.seravkin.notifications.infrastructure.time.{ActualSystemDateTime, SystemDateTime}
 import me.seravkin.notifications.persistance.NotificationsRepository
@@ -22,6 +24,8 @@ import shapeless._
 import me.seravkin.notifications.test.mocks._
 import me.seravkin.tg.adapter.Bot
 import me.seravkin.tg.adapter.events._
+
+import scala.util
 
 class NotificationBotSpec extends FlatSpec with Matchers {
 
@@ -442,18 +446,22 @@ class NotificationBotSpec extends FlatSpec with Matchers {
     Recurrent(5, defaultUserId + 1, "asdasd", LocalDateTime.now(), LocalDateTime.now(), true)
   )
 
+  private[this] val parser = new CombinatorMomentInFutureParser(new MomentInFutureAstToF[State[MockBotState, ?]](
+    (int: Int) => State.pure[MockBotState, Int](new util.Random(1).nextInt(int))
+  ))
+
   private[this] def createBot(systemDateTime: SystemDateTime): NotificationBot[State[MockBotState, ?]] =
     NotificationBot[State[MockBotState, ?]](
       MockUsersRepository(defaultUser),
       MockChatStateRepository,
       MockSender,
-      CombinatorMomentInFutureParser,
+      parser,
       MockNotificationRepository,
       new NotificationChatServiceImpl[State[MockBotState, ?]](
         MockNotificationRepository,
         MockUsersRepository(defaultUser),
         MockChatStateRepository,
-        CombinatorMomentInFutureParser,
+        parser,
         systemDateTime,
         MockSender
       ),

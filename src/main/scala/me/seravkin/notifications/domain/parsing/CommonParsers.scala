@@ -7,7 +7,7 @@ import me.seravkin.notifications.domain.internationalization.Words._
 
 import scala.util.parsing.combinator._
 
-trait CommonParsers extends RegexParsers { this: TimeConstants with HasInternationalization =>
+trait CommonParsers[T] extends RegexParsers { this: TimeConstants with HasInternationalization with HasMomentInFutureAst[T] =>
 
   private[this] val FullDateRegex = internationalization.words(FullDateRegexString).head.r
   private[this] val DateRegex = internationalization.words(DateRegexString).head.r
@@ -34,7 +34,7 @@ trait CommonParsers extends RegexParsers { this: TimeConstants with HasInternati
 
   def duration: Parser[Duration] = int ~ timeUnit ^^ { case i ~ toDuration => toDuration(i) }
 
-  def durations: Parser[MomentInFuture] = rep1(duration) ^^ { seq => FromDuration(seq.reduce(_ plus _)) }
+  def durations: Parser[T] = rep1(duration) ^^ { seq => momentInFutureAst.duration(seq.reduce(_ plus _)) }
 
   def validatedDateWithYear: Parser[(Int, Int, Int)] =
     FullDateRegex ^^ { case FullDateRegex(day, month, year) => (day.toInt, month.toInt, year.toInt) } filter(x => 1 <= x._1 && x._1 <= 31 && 1 <= x._2 && x._2 <= 12 )
@@ -45,10 +45,13 @@ trait CommonParsers extends RegexParsers { this: TimeConstants with HasInternati
   def validatedDate: Parser[(Int, Int)] =
     DateRegex ^^ { case DateRegex(day, month) => day.toInt -> month.toInt } filter(x => 1 <= x._1 && x._1 <= 31 && 1 <= x._2 && x._2 <= 12 )
 
-  def formattedDateWithYear: Parser[Date] = validatedDateWithYear ^^ { case (day, month, year) => FormattedDateWithYear(day, month, year) }
+  def formattedDateWithYear: Parser[T] = validatedDateWithYear ^^ { case (day, month, year) =>
+    momentInFutureAst.date(day, month, year) }
 
-  def formattedDate: Parser[Date] = validatedDate ^^ { case (day, month) => FormattedDate(day, month) }
+  def formattedDate: Parser[T] = validatedDate ^^ { case (day, month) =>
+    momentInFutureAst.date(day, month) }
 
-  def formattedTime: Parser[FormattedTime] = validatedTime ^^ { case (hour, minutes) => FormattedTime(hour, minutes) }
+  def formattedTime: Parser[T] = validatedTime ^^ { case (hour, minutes) =>
+    momentInFutureAst.time(hour, minutes) }
 
 }

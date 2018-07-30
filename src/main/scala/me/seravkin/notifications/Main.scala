@@ -26,9 +26,11 @@ import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
 import me.seravkin.notifications.bot.services.{NotificationChatServiceImpl, PageViewImpl}
 import me.seravkin.notifications.bot.{ChatState, NotificationBot}
+import me.seravkin.notifications.domain.interpreter.MomentInFutureAstToF
 import me.seravkin.notifications.domain.services.NotificationTasksServiceImpl
 import me.seravkin.notifications.infrastructure.config.Configuration
 import me.seravkin.notifications.infrastructure.config.Configuration.NotificationConfiguration
+import me.seravkin.notifications.infrastructure.random.BotIORandom
 import monix.eval.Task
 import monix.execution.Scheduler.Implicits.global
 import me.seravkin.tg.adapter.events.BotEvent
@@ -47,15 +49,17 @@ object Main extends IOApp {
     _       <- adapter.runSafe()
   ) yield ExitCode.Success
 
+  private[this] val parser = new CombinatorMomentInFutureParser(new MomentInFutureAstToF[BotIO](BotIORandom))
+
   private[this] def botFor: NotificationBot[BotIO] = NotificationBot[BotIO](DoobieUsersRepository,
     BotIOChatStateRepository,
     BotIOSender,
-    CombinatorMomentInFutureParser,
+    parser,
     DoobieNotificationsRepository,
     new NotificationChatServiceImpl(DoobieNotificationsRepository,
       DoobieUsersRepository,
       BotIOChatStateRepository,
-      CombinatorMomentInFutureParser,
+      parser,
       ActualSystemDateTime,
       BotIOSender),
     new PageViewImpl(

@@ -11,6 +11,7 @@ import me.seravkin.notifications.bot.{ChatState, InControlWaitingForConfirmation
 import me.seravkin.notifications.bot.commands.SelectNotificationDate
 import me.seravkin.notifications.domain.Notifications.OneTime
 import me.seravkin.notifications.domain.PersistedUser
+import me.seravkin.notifications.domain.interpreter.NotificationPrototype
 import me.seravkin.notifications.domain.parsing.MomentInFutureParser
 import me.seravkin.notifications.infrastructure.messages.{Button, Sender}
 import me.seravkin.notifications.infrastructure.state.ChatStateRepository
@@ -20,7 +21,7 @@ import me.seravkin.notifications.persistance.{NotificationsRepository, UsersRepo
 final class NotificationChatServiceImpl[F[_]: Monad](notificationsRepository: NotificationsRepository[F],
                                                      usersRepository: UsersRepository[F],
                                                      chatStateRepository: ChatStateRepository[ChatState, F],
-                                                     momentInFutureParser: MomentInFutureParser,
+                                                     momentInFutureParser: MomentInFutureParser[NotificationPrototype[F]],
                                                      systemDateTime: SystemDateTime,
                                                      sender: Sender[F]) extends NotificationChatService[F] {
 
@@ -36,20 +37,19 @@ final class NotificationChatServiceImpl[F[_]: Monad](notificationsRepository: No
   override def tryStore(user: PersistedUser, chatId: Long, text: String, notification: String): F[Unit] = {
     momentInFutureParser.parseMomentInFuture(notification) match {
 
-      case Right(momentInFuture) if momentInFuture.isRelativeToDate && isUncertainTime =>
+      case Right(proto @ NotificationPrototype(_, true, _)) if isUncertainTime =>
         val delta = if(systemDateTime.now.getHour < 12) -1 else 0
 
-        val today = momentInFuture.toExecutionTime(systemDateTime.now.plusDays(delta))
-        val tomorrow = momentInFuture.toExecutionTime(systemDateTime.now.plusDays(1 + delta))
-
-        for (_ <- sender.tell(chatId, "Какая дата точно имелась в виду:", dateButton(today) :: dateButton(tomorrow) :: Nil);
-             _ <- chatStateRepository.set(chatId, InControlWaitingForConfirmation(chatId, text, notification)))
+        for (today    <- proto(systemDateTime.now.plusDays(delta));
+             tomorrow <- proto(systemDateTime.now.plusDays(1 + delta));
+             _        <- sender.tell(chatId, "Какая дата точно имелась в виду:", dateButton(today) :: dateButton(tomorrow) :: Nil);
+             _        <- chatStateRepository.set(chatId, InControlWaitingForConfirmation(chatId, text, notification)))
           yield ()
 
-      case Right(momentInFuture) =>
-        val time = momentInFuture.toExecutionTime(systemDateTime.now)
-
-        storeAndReply(user, chatId, text, time)
+      case Right(proto) =>
+        for(time <- proto(systemDateTime.now);
+            _    <- storeAndReply(user, chatId, text, time))
+          yield ()
 
       case Left(error) =>
         for (_ <- sender.ask(chatId, s"Время в неправильном формате. Ошибка: $error"))

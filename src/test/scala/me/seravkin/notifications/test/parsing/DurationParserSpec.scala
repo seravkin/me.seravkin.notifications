@@ -3,6 +3,7 @@ package me.seravkin.notifications.test.parsing
 import java.time.Duration
 
 import me.seravkin.notifications.domain.internationalization.LegacyInternationalization
+import me.seravkin.notifications.domain.interpreter.NotificationProgramAst
 import me.seravkin.notifications.domain.parsing._
 import org.scalatest.{FlatSpec, FunSuite, Matchers}
 
@@ -80,34 +81,14 @@ class DurationParserSpec extends FlatSpec with Matchers {
     assertParsedTime(FromFormattedDate(InNextDayOfWeek(2,3), FormattedTime(12, 0)))("в чт через две нед в 12:00")
   }
 
-  it should "parse on every day in given time" in {
-    assertParsedTime(InTime(12, 0))("каждый день в 12:00")
-  }
-
-  it should "parse on wednesday in given time" in {
-    assertParsedTime(EveryDaysOfWeek(Set(2), InTime(13, 45)))("каждую среду в 13:45")
-  }
-
-  it should "parse on multiple days of week in given time" in {
-    assertParsedTime(EveryDaysOfWeek(Set(2, 3), InTime(13, 45)))("каждую среду, четверг в 13:45")
-  }
-
-  it should "parse on working days of week in given time" in {
-    assertParsedTime(EveryDaysOfWeek(Set(0, 1, 2, 3, 4), InTime(13, 45)))("каждый будний в 13:45")
-  }
-
-  it should "parse on weekends of week in given time" in {
-    assertParsedTime(EveryDaysOfWeek(Set(5, 6), InTime(13, 45)))("каждый выходной в 13:45")
-  }
-
   it should "parse notification for specific user" in {
     assertParsedTime(ForUser("DogeShibu", FromFormattedDate(InDays(0), FormattedTime(12, 45))))("для @DogeShibu сегодня в 12:45")
   }
 
 
   private def assertParsedTime(momentInFuture: NotificationProgram)(text: String) = {
-    val parser = new DurationParser(LegacyInternationalization)
-    val result = parser.parse(text)
+    val parser = new CombinatorMomentInFutureParser[NotificationProgram](NotificationProgramAst)
+    val result = parser.parseMomentInFuture(text)
 
     result.toOption.nonEmpty should be (true)
 

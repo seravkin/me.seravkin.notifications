@@ -17,8 +17,8 @@ import me.seravkin.notifications.infrastructure.messages.Button
 import me.seravkin.tg.adapter.requests.RequestHandlerF
 import monix.eval.Task
 
-
 import scala.collection.concurrent.TrieMap
+import scala.util.Random
 
 final case class BotOpInterpreter(map: TrieMap[Long, ChatState], requestHandler: RequestHandlerF[IO])
   extends (BotOp ~> ReaderT[IO, Transactor[IO], ?]) {
@@ -37,6 +37,9 @@ final case class BotOpInterpreter(map: TrieMap[Long, ChatState], requestHandler:
     case Set(chatId, state) => IO {
       map += chatId -> state
       ()
+    }
+    case NextRandomInt(nextInt) => IO {
+      new Random().nextInt(nextInt)
     }
     case Send(chatId, text, buttons, None) => requestHandler
       .ask(SendMessage(chatId, text, replyMarkup = buttonsToMarkup(buttons)))

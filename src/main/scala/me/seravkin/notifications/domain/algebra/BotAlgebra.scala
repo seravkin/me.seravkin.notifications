@@ -12,6 +12,7 @@ object BotAlgebra {
   final case class Set(chatId: Long, state: ChatState) extends BotOp[Unit]
   final case class Get(chatId: Long) extends BotOp[ChatState]
   final case class DatabaseAction[T](connectionIO: ConnectionIO[T]) extends BotOp[T]
+  final case class NextRandomInt(max: Int) extends BotOp[Int]
 
   type BotIO[A] = Free[BotOp, A]
 }
