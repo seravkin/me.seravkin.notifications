@@ -47,6 +47,8 @@ object LegacyInternationalization extends Internationalization {
     case AtMorning => "утром" :: Nil
     case AtEvening => "вечером" :: Nil
     case AtDay => "днем" :: Nil
+    case Confirmation => "подтверждение" :: Nil
+    case With => "с" :: Nil
   }
 
 }

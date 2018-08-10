@@ -10,9 +10,7 @@ import cats.data.OptionT
 import cats.syntax.all._
 import info.mukel.telegrambot4s.models.{CallbackQuery, ChatType, Message}
 import me.seravkin.notifications.bot.NotificationBot._
-import me.seravkin.notifications.domain.Notifications.{Notification, OneTime, Recurrent}
 import me.seravkin.notifications.domain._
-import me.seravkin.notifications.domain.algebra.BotAlgebra.BotIO
 import me.seravkin.notifications.domain.parsing.MomentInFutureParser
 import me.seravkin.notifications.infrastructure.messages.{Button, Sender}
 import me.seravkin.notifications.infrastructure.state.ChatStateRepository
@@ -20,18 +18,18 @@ import me.seravkin.notifications.infrastructure.time.SystemDateTime
 import me.seravkin.notifications.persistance.{NotificationsRepository, Page, UsersRepository}
 import me.seravkin.notifications.bot.commands._
 import me.seravkin.notifications.bot.services.{NotificationChatService, PageView}
-import me.seravkin.notifications.domain.interpreter.NotificationPrototype
+import me.seravkin.notifications.domain.interpreter.DatesFactory
 import me.seravkin.tg.adapter._
 import me.seravkin.tg.adapter.events._
 
 final case class NotificationBot[F[_] : Monad](usersRepository: UsersRepository[F],
-                                                             chatStateRepository: ChatStateRepository[ChatState, F],
-                                                             sender: Sender[F],
-                                                             momentInFutureParser: MomentInFutureParser[NotificationPrototype[F]],
-                                                             notificationsRepository: NotificationsRepository[F],
-                                                             notificationChatService: NotificationChatService[F],
-                                                             pageView: PageView[F],
-                                                             systemDateTime: SystemDateTime) extends (BotEvent => F[Unit]) {
+                                               chatStateRepository: ChatStateRepository[ChatState, F],
+                                               sender: Sender[F],
+                                               momentInFutureParser: MomentInFutureParser[DatesFactory[F]],
+                                               notificationsRepository: NotificationsRepository[F],
+                                               notificationChatService: NotificationChatService[F],
+                                               pageView: PageView[F],
+                                               systemDateTime: SystemDateTime) extends (BotEvent => F[Unit]) {
 
 
   def apply(event: BotEvent): F[Unit] = event match {

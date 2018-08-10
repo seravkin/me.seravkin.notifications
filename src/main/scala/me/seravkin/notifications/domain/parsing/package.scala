@@ -2,6 +2,7 @@ package me.seravkin.notifications.domain
 
 import java.time.{Duration, LocalDate, LocalDateTime}
 
+import me.seravkin.notifications.domain.Notifications.Notification
 import me.seravkin.notifications.domain.internationalization.Words.DayOfWeek
 
 import scala.util.Random
@@ -34,6 +35,7 @@ package object parsing {
     def fuzzyTime(period: Period): T
 
     def forUser(username: String, t: T): T
+    def confirmation(duration: Option[Duration], t: T): T
 
   }
 
@@ -64,6 +66,8 @@ package object parsing {
   final case class FormattedTime(hours: Int, minutes: Int) extends MomentInFuture with Time
   final case class AtFuzzyTime(period: Period) extends MomentInFuture with Time
   final case object InCurrentTime extends MomentInFuture with Time
+
+  final case class WithConfirmation(duration: Option[Duration], notificationProgram: NotificationProgram) extends MomentInFuture
 
   sealed trait Period { def period: (Int, Int); }
   final case object Night extends Period { override def period: (Int, Int) = 0 -> 8 }

@@ -24,6 +24,8 @@ object Words {
 
   object Every extends Word
   object In extends Word
+  object With extends Word
+  object Confirmation extends Word
 
   object CurrentTime extends Word
   object AtNight extends Word

@@ -1,6 +1,6 @@
 name := "me.seravkin.notifications"
 
-version := "0.2"
+version := "0.3.0"
 
 scalaVersion := "2.12.4"
 

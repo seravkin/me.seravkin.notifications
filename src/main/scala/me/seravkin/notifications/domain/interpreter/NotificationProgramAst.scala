@@ -47,4 +47,7 @@ object NotificationProgramAst extends MomentInFutureAst[NotificationProgram] wit
 
   override def inTime(hours: Int, minutes: Int): NotificationProgram =
     InTime(hours, minutes)
+
+  override def confirmation(duration: Option[Duration], t: NotificationProgram): NotificationProgram =
+    WithConfirmation(duration, t)
 }

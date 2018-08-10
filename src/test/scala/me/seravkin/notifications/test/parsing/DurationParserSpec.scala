@@ -37,6 +37,14 @@ class DurationParserSpec extends FlatSpec with Matchers {
     assertParsedTime(FromFormattedDate(InDays(0), FormattedTime(12, 45)))("сегодня в 12:45")
   }
 
+  it should "parse today date and time with confirmation" in {
+    assertParsedTime(WithConfirmation(None, FromFormattedDate(InDays(0), FormattedTime(12, 45))))("сегодня в 12:45 с подтверждением")
+  }
+
+  it should "parse today date and time with given duration" in {
+    assertParsedTime(WithConfirmation(Some(Duration.ofMinutes(30)), FromFormattedDate(InDays(0), FormattedTime(12, 45))))("сегодня в 12:45 с подтверждением каждые 30 м")
+  }
+
   it should "parse today date and time in short format" in {
     assertParsedTime(FromFormattedDate(InDays(0), FormattedTime(12, 45)))("12:45")
   }
@@ -85,16 +93,31 @@ class DurationParserSpec extends FlatSpec with Matchers {
     assertParsedTime(ForUser("DogeShibu", FromFormattedDate(InDays(0), FormattedTime(12, 45))))("для @DogeShibu сегодня в 12:45")
   }
 
+  it should "parse on every day in given time" in {
+    assertParsedTime(InTime(12, 0))("каждый день в 12:00")
+  }
+
+  it should "parse on wednesday in given time" in {
+    assertParsedTime(EveryDaysOfWeek(Set(2), InTime(13, 45)))("каждую среду в 13:45")
+  }
+
+  it should "parse on multiple days of week in given time" in {
+    assertParsedTime(EveryDaysOfWeek(Set(2, 3), InTime(13, 45)))("каждую среду, четверг в 13:45")
+  }
+
+  it should "parse on working days of week in given time" in {
+    assertParsedTime(EveryDaysOfWeek(Set(0, 1, 2, 3, 4), InTime(13, 45)))("каждый будний в 13:45")
+  }
+
+  it should "parse on weekends of week in given time" in {
+    assertParsedTime(EveryDaysOfWeek(Set(5, 6), InTime(13, 45)))("каждый выходной в 13:45")
+  }
 
   private def assertParsedTime(momentInFuture: NotificationProgram)(text: String) = {
-    val parser = new CombinatorMomentInFutureParser[NotificationProgram](NotificationProgramAst)
+    val parser = new CombinatorMomentInFutureParser[NotificationProgram](NotificationProgramAst, NotificationProgramAst)
     val result = parser.parseMomentInFuture(text)
 
-    result.toOption.nonEmpty should be (true)
-
-    val duration = result.toOption.get
-
-    duration should be (momentInFuture)
+    result should be (Right(momentInFuture))
   }
 }
 

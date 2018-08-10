@@ -3,7 +3,8 @@ package me.seravkin.notifications
 import cats._
 import cats.implicits._
 import info.mukel.telegrambot4s.models.CallbackQuery
-import me.seravkin.notifications.domain.Notifications.{Notification, OneTime, Recurrent}
+import me.seravkin.notifications.domain.Notifications.Notification
+import me.seravkin.notifications.domain.interpreter._
 
 package object bot {
 
@@ -37,11 +38,14 @@ package object bot {
       Some(arg)
   }
 
+  //TODO: Правильное отображение для других типов
+  //TODO: выразить через Show[T]
   implicit val showForListOfNotifications: Show[List[Notification]] = Show.show { notifications =>
     "Напоминания:\n" +
       notifications.collect {
-        case n: OneTime => s"Напоминание ${n.id} о " + "\"" + n.text + "\" в " + n.when.toString
-        case n: Recurrent => s"Напоминание ${n.id} о " + "\"" + n.text + "\""
+        case Notification(id, _, text, _, n: OneDate) =>
+          s"Напоминание $id о " + "\"" + text + "\" в " + n.notificationDate.toString
+        case Notification(id, _, text, _, _) => s"Напоминание $id о " + "\"" + text + "\""
       }.foldLeft("") {
         _ + "\n" + _
       }

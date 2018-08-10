@@ -1,15 +1,17 @@
 package me.seravkin.notifications.persistance.botio
 
-import cats.free.Free
-import doobie.free.connection.ConnectionIO
-import doobie.util.composite.Composite
-import doobie.util.fragment.Fragment
+import cats._
+import cats.implicits._
+import cats.effect._
+import cats.data._
+import doobie._
+import doobie.implicits.{toConnectionIOOps, _}
 import fs2.Stream
-import me.seravkin.notifications.domain.algebra.BotAlgebra.{BotIO, DatabaseAction}
 
-trait BotIORepository {
-  def botIO[A](connectionIO: => ConnectionIO[A]): BotIO[A] =
-    Free.liftF(DatabaseAction(connectionIO))
+trait BotIORepository[F[_]] {
+  def botIO[A](connectionIO: => ConnectionIO[A])(implicit evM: Monad[F]): ReaderT[F, Transactor[F], A] = ReaderT { tx =>
+    connectionIO.transact(tx)
+  }
 
   implicit class FragmentOps(fragment: Fragment) {
     def read[Entity: Composite]: Stream.ToEffect[doobie.ConnectionIO, Entity] = fragment

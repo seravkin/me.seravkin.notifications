@@ -1,18 +1,57 @@
 package me.seravkin.notifications.persistance.botio
 
-import java.time.LocalDateTime
+import java.time.{Duration, LocalDateTime}
 
 import doobie._
 import doobie.implicits._
 import cats._
+import cats.data.ReaderT
 import cats.implicits._
-import me.seravkin.notifications.domain.Notifications.{Notification, OneTime}
-import me.seravkin.notifications.domain.algebra.BotAlgebra.BotIO
+import me.seravkin.notifications.domain.Notifications._
+import me.seravkin.notifications.domain.interpreter._
 import me.seravkin.notifications.domain.{Notifications, PersistedUser}
+import me.seravkin.notifications.infrastructure.BotF
 import me.seravkin.notifications.persistance.{NotificationsRepository, Page, botio}
 
 
-object DoobieNotificationsRepository extends NotificationsRepository[BotIO] with BotIORepository {
+final class DoobieNotificationsRepository[F[_]: Monad] extends NotificationsRepository[BotF[F, ?]] with BotIORepository[F] {
+
+  private final case class NotificationFlatten(id: Long, userId: Long, text: String, kind: String,
+                                               isActive: Boolean,
+                                               dateToNotificate: Option[LocalDateTime] = None,
+                                               periodInSeconds: Option[Long] = None,
+                                               hour: Option[Int] = None,
+                                               minute: Option[Int] = None,
+                                               days: Option[String] = None,
+                                               start: Option[LocalDateTime] = None,
+                                               end: Option[LocalDateTime] = None) {
+
+
+
+    def toNotification: Option[Notification] = kind match {
+      case "OneDate" => dateToNotificate.map(dt => Notification(id, userId, text, isActive, OneDate(dt)))
+      case "Confirmation" => dateToNotificate.map2(periodInSeconds) { case (dt, per) =>
+        Notification(id, userId, text, isActive, Confirmation(dt, Duration.ofSeconds(per)))
+      }
+      case "Periodic" => (dateToNotificate, hour, minute, days.map(_.split(',').map(_.toInt).toSet)).mapN { case (dt, h, m, d) =>
+        Notification(id, userId, text, isActive, Periodic(dt, h, m, d, start, end))
+      }
+    }
+
+  }
+
+  private object NotificationFlatten {
+    def apply(nt: Notification): NotificationFlatten = nt.dates match {
+      case OneDate(dt) =>
+        NotificationFlatten(nt.id, nt.userId, nt.text, "OneDate", nt.isActive, Some(dt))
+      case Confirmation(dt, period) =>
+        NotificationFlatten(nt.id, nt.userId, nt.text, "Confirmation", nt.isActive,
+        Some(dt), Some(period.getSeconds))
+      case Periodic(dt, hour, minute, days, start, end) =>
+        NotificationFlatten(nt.id, nt.userId, nt.text, "Periodic", nt.isActive, Some(dt), None, Some(hour), Some(minute),
+          Some(days.map(_.toString).reduce { _ + "," + _}), start, end)
+    }
+  }
 
   private implicit val DateTimeMeta: Meta[LocalDateTime] =
     Meta[java.sql.Timestamp].xmap(
@@ -20,35 +59,39 @@ object DoobieNotificationsRepository extends NotificationsRepository[BotIO] with
       dt => java.sql.Timestamp.valueOf(dt)
     )
 
-  override def apply(id: Long): BotIO[Option[Notifications.Notification]] = botIO {
-    sql"SELECT id, id_user, text, dt_to_notificate, is_active FROM notifications WHERE id = $id"
-      .read[OneTime]
+  override def apply(id: Long): BotF[F, Option[Notifications.Notification]] = botIO {
+    sql"SELECT id, id_user, text, kind, is_active, dt_to_notificate, period, hour, minute, days, start, finish FROM notifications WHERE id = $id"
+      .read[NotificationFlatten]
       .last
-      .map(_.map(_.asInstanceOf[Notification]))
+      .map(_.flatMap(_.toNotification))
   }
 
 
-  override def apply(user: PersistedUser): BotIO[List[Notifications.Notification]] = botIO {
-    sql"SELECT id, id_user, text, dt_to_notificate, is_active FROM notifications WHERE is_active = TRUE AND id_user = ${user.id}"
-      .read[OneTime]
+  override def apply(user: PersistedUser): BotF[F, List[Notifications.Notification]] = botIO {
+    sql"SELECT id, id_user, text, kind, is_active, dt_to_notificate, period, hour, minute, days, start, finish  FROM notifications WHERE is_active = TRUE AND id_user = ${user.id}"
+      .read[NotificationFlatten]
       .toList
       .map(_.map(_.asInstanceOf[Notification]))
   }
 
-  override def +=[T <: Notifications.Notification](t: T): BotIO[T] = botIO {
-    t match {
-      case o@OneTime(_, userId, text, when, isActive) =>
-        sql"INSERT INTO notifications (text, is_active, dt_to_notificate, id_user) VALUES ($text,TRUE, $when, $userId) RETURNING id"
-          .update
-          .withGeneratedKeys[Long]("id")
-          .compile
-          .last
-          .map(_.get)
-          .map(id => o.copy(id = id).asInstanceOf[T])
-    }
+  override def +=[T <: Notifications.Notification](t: T): BotF[F, T] = botIO {
+      val flatten = NotificationFlatten(t)
+
+      sql"""INSERT INTO notifications
+            (id_user, text, kind, is_active, dt_to_notificate, period, hour, minute, days, start, finish )
+            VALUES (${flatten.userId},${flatten.text},${flatten.kind},TRUE,
+                    ${flatten.dateToNotificate}, ${flatten.periodInSeconds}, ${flatten.hour}, ${flatten.minute},
+                    ${flatten.days}, ${flatten.start}, ${flatten.end}) RETURNING id"""
+        .update
+        .withGeneratedKeys[Long]("id")
+        .compile
+        .last
+        .map(_.get)
+        .map(id => t.copy(id = id).asInstanceOf[T])
+
   }
 
-  override def deactivate(ids: List[Long]): BotIO[Unit] = botIO {
+  override def deactivate(ids: List[Long]): BotF[F, Unit] = botIO {
     ids match {
       case any :: xs =>
         (fr"UPDATE notifications set is_active = FALSE WHERE " ++ Fragments.in(fr"id", ids.toNel.get))
@@ -59,24 +102,27 @@ object DoobieNotificationsRepository extends NotificationsRepository[BotIO] with
     }
   }
 
-  private[this] def activeNotificationsCount(user: PersistedUser): BotIO[Int] = botIO {
+  private[this] def activeNotificationsCount(user: PersistedUser): BotF[F, Int] = botIO {
     sql"SELECT count(id) from notifications where is_active = TRUE AND id_user = ${user.id}"
       .query[Int]
       .unique
   }
 
-  private[this] def pageOfNotifications(user: PersistedUser, skip: Int, take: Int): BotIO[List[OneTime]] = botIO {
-    sql"SELECT id, id_user, text, dt_to_notificate, is_active FROM notifications WHERE is_active = TRUE AND id_user = ${user.id} ORDER BY dt_to_notificate DESC LIMIT $take OFFSET $skip"
-      .read[OneTime]
+  private[this] def pageOfNotifications(user: PersistedUser, skip: Int, take: Int): BotF[F, List[Notification]] = botIO {
+    sql"""SELECT id, id_user, text, kind, is_active, dt_to_notificate, period, hour, minute, days, start, finish
+          FROM notifications WHERE is_active = TRUE AND id_user = ${user.id}
+          ORDER BY dt_to_notificate DESC LIMIT $take OFFSET $skip"""
+      .read[NotificationFlatten]
       .toList
+      .map(_.map(_.toNotification).collect { case Some(x) => x })
   }
 
-  override def apply(user: PersistedUser, skip: Int, take: Int): BotIO[Page[Notification]] = for(
+  override def apply(user: PersistedUser, skip: Int, take: Int): BotF[F, Page[Notification]] = for(
     count   <- activeNotificationsCount(user);
     entries <- pageOfNotifications(user, skip, take)
   ) yield Page(entries, skip != 0, count > skip + entries.length)
 
-  override def update(id: Long, text: String): BotIO[Unit] = botIO {
+  override def update(id: Long, text: String): BotF[F, Unit] = botIO {
     sql"UPDATE notifications SET text = $text WHERE id = $id"
       .update
       .run

@@ -9,7 +9,7 @@ import info.mukel.telegrambot4s.models.CallbackQuery
 import me.seravkin.notifications.bot.commands._
 import me.seravkin.notifications.bot.services.NotificationChatService
 import me.seravkin.notifications.domain.PersistedUser
-import me.seravkin.notifications.domain.interpreter.NotificationPrototype
+import me.seravkin.notifications.domain.interpreter.DatesFactory
 import me.seravkin.notifications.domain.parsing.MomentInFutureParser
 import me.seravkin.notifications.infrastructure.messages.{Button, Sender}
 import me.seravkin.notifications.infrastructure.time.SystemDateTime
@@ -20,7 +20,7 @@ object InCallbackHandler {
   def apply[F[_]: Monad](user: PersistedUser,
                          notificationsRepository: NotificationsRepository[F],
                          sender: Sender[F],
-                         momentInFutureParser: MomentInFutureParser[NotificationPrototype[F]],
+                         momentInFutureParser: MomentInFutureParser[DatesFactory[F]],
                          notificationChatService: NotificationChatService[F],
                          systemDateTime: SystemDateTime) : BotHandler[CallbackQuery, F] = {
 
@@ -30,7 +30,8 @@ object InCallbackHandler {
       val Right(moment) = momentInFutureParser.parseMomentInFuture(time)
 
       for(time <- moment(systemDateTime.now.withMonth(month).withDayOfMonth(day));
-          _    <- notificationChatService.storeAndReply(user, chatId, text, time))
+                  // Можем это делать, т.к. в прошлый раз уже распарсили
+          _    <- notificationChatService.storeAndReply(user, chatId, text, time.toOption.get))
         yield ()
 
   }
