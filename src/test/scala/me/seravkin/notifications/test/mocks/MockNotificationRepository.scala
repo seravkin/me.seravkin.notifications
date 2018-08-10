@@ -22,7 +22,7 @@ final class MockNotificationRepository[F[_]: Monad] extends NotificationsReposit
   ) yield Page(entries, skip != 0, count > skip + entries.length)
 
   override def +=[T <: Notification](t: T): StateT[F, MockBotState, T] =
-    StateT.modify[F, MockBotState](st => st.copy(notifications = st.notifications :+ t)) >> StateT.pure[F, MockBotState, T](t)
+    StateT.modify[F, MockBotState](st => st.copy(notifications = st.notifications :+ t)).map(_ => t)
 
   private def changeIsActive(ids: Set[Long])(notification: Notification): Notification = notification match {
     case _ if !ids.contains(notification.id) => notification

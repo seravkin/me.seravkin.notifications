@@ -34,11 +34,11 @@ final class DurationParser[T](i8ln: Internationalization, futureAst: MomentInFut
   def withUsername: Parser[T] = (username ~ caseInsensitive(syntax)) ^^ { case name ~ s =>
     momentInFutureAst.forUser(name, s) }
 
-  def parse(string: String): Either[String, T] = parseAll(withUsername | caseInsensitive(syntax), string) match {
+  def parse(string: String): Either[String, T] = parse(withUsername | caseInsensitive(syntax), string) match {
       case Success(t, _) => Right(t)
-      case Failure(msg, _) => Left(msg)
-      case Error(msg, _) => Left(msg)
-      case NoSuccess(msg, _) => Left(msg)
+      case Failure(msg, inp) => Left(s"$msg - ${inp.pos}")
+      case Error(msg, inp) => Left(s"$msg - ${inp.pos}")
+      case NoSuccess(msg, inp) => Left(s"$msg - ${inp.pos}")
     }
 
 

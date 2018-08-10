@@ -71,8 +71,7 @@ final case class NotificationBot[F[_] : Monad](usersRepository: UsersRepository[
 
   private[this] def processCallbackQuery(user: PersistedUser): (ChatState, CallbackQuery) => F[Unit] =
     handlers(user)(
-      ListCallbackHandler(user, pageView, notificationsRepository, notificationChatService, chatStateRepository, sender),
-      InCallbackHandler(user, notificationsRepository, sender, momentInFutureParser, notificationChatService, systemDateTime)
+      ListCallbackHandler(user, pageView, notificationsRepository, notificationChatService, chatStateRepository, sender)
     )
 
   private[this] def handlers[T](user: PersistedUser)(functions: BotHandler[T, F]*)(chatState: ChatState, message: T) =

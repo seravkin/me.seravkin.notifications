@@ -106,54 +106,6 @@ class NotificationBotSpec extends FlatSpec with Matchers {
 
     notification.text should be ("test 1")
   }
-  
-  it should "ask exact date if notification was requested before 00:00" in {
-    val bot = createBot(MockDateTime(LocalDateTime.of(2018,5,17,23,56)))
-
-    def sendAtNight(text: String) =
-      bot(ReceiveMessage(Message(-1, Some(defaultTgUser), 0, Chat(1, ChatType.Private), text = Some(text))))
-
-    val dialogue = for(
-      _ <- sendAtNight("/in");
-      _ <- sendAtNight("test wtf");
-      _ <- sendAtNight("завтра в 12:00");
-      m <- shouldAnswerWith(sentMessage)(predicate(_ == "Какая дата точно имелась в виду:",
-                                         hasButtonsWithNames("пятница 18.05", "суббота 19.05")));
-      _ <- sendCallback(m.buttons.last.command)
-    ) yield ()
-
-    val (state, _) = dialogue
-      .run(MockBotState(defaultUser :: Nil, notifications = existingNotifications.toList))
-      .unsafeRunSync()
-
-    val Notification(_, _, "test wtf", true, OneDate(date)) = state.notifications.last
-
-    date.getDayOfMonth should be (20)
-  }
-
-  it should "ask exact date if notification was requested after 00:00" in {
-    val bot = createBot(MockDateTime(LocalDateTime.of(2018,5,18,0,20)))
-
-    def sendAtNight(text: String) =
-      bot(ReceiveMessage(Message(-1, Some(defaultTgUser), 0, Chat(1, ChatType.Private), text = Some(text))))
-
-    val dialogue = for(
-      _ <- sendAtNight("/in");
-      _ <- sendAtNight("test wtf");
-      _ <- sendAtNight("завтра в 12:00");
-      m <- shouldAnswerWith(sentMessage)(predicate(_ == "Какая дата точно имелась в виду:",
-        hasButtonsWithNames("пятница 18.05", "суббота 19.05")));
-      _ <- sendCallback(m.buttons.last.command)
-    ) yield ()
-
-    val (state, _) = dialogue
-      .run(MockBotState(defaultUser :: Nil, notifications = existingNotifications.toList))
-      .unsafeRunSync()
-
-    val Notification(_, _, "test wtf", true, OneDate(date)) = state.notifications.last
-
-    date.getDayOfMonth should be (20)
-  }
 
   it should "try asking user again if request is incorrect and request is multiline" in {
     val dialogue = for(
@@ -441,7 +393,11 @@ class NotificationBotSpec extends FlatSpec with Matchers {
 
   private[this] val existingNotifications =  Vector(
     Notification(1, defaultUserId, "test 1",true, OneDate(LocalDateTime.of(2018,12,1,12,0))),
-    Notification(2, defaultUserId, "test 1 na", false, OneDate(LocalDateTime.of(2018,12,1,12,0)))
+    Notification(2, defaultUserId, "test 1 na", false, OneDate(LocalDateTime.of(2018,12,1,12,0))),
+    Notification(3, defaultUserId, "rec test 1", true, Periodic(LocalDateTime.now(), 10, 10, Set(1), None, None)),
+    Notification(4, defaultUserId, "rec test 1 - na", false, Periodic(LocalDateTime.now(), 10, 10, Set(1), None, None)),
+    Notification(5, defaultUserId + 1, "asdasd", true, Periodic(LocalDateTime.now(), 10, 10, Set(1), None, None))
+
   )
 
   private[this] val random: Random[MockBotF] =

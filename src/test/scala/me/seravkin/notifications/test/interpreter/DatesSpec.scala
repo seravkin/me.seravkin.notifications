@@ -22,7 +22,7 @@ class DatesSpec extends FlatSpec with Matchers {
   }
 
   it should "move to next week if periodic on one day" in {
-    Periodic(12, 12, Set(1), None, None)(previousNow) should be (LocalDateTime.of(2018, 10, 16, 12, 12))
+    Periodic(12, 12, Set(1), None, None)(previousNow).notificationDate should be (LocalDateTime.of(2018, 10, 16, 12, 12))
   }
 
 }

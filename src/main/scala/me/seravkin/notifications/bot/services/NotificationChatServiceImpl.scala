@@ -36,7 +36,7 @@ final class NotificationChatServiceImpl[F[_]: Monad](notificationsRepository: No
   }
 
   override def tryStore(user: PersistedUser, chatId: Long, text: String, notification: String): F[Unit] =
-    tryParseAndInterpret(notification).value.map {
+    tryParseAndInterpret(notification).value.flatMap {
       case Right(dates) =>
         storeAndReply(user, chatId, text, dates)
       case Left(error) =>

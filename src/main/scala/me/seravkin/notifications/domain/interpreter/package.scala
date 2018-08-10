@@ -41,7 +41,7 @@ package object interpreter {
     private def nextDate(now: LocalDateTime, hour: Int, minutes: Int, days: Set[Int]): LocalDateTime = {
       val current = now.getDayOfWeek.getValue
       if(days.forall(current > _)) {
-        now.plusDays(7 - current + days.min).withHour(hour).withMinute(minutes)
+        now.plusDays(7 - current + 1 + days.min).withHour(hour).withMinute(minutes)
       } else {
         now.plusDays(days.filter(_ >= current).min - current).withHour(hour).withMinute(minutes)
       }
