@@ -71,7 +71,7 @@ final class DoobieNotificationsRepository[F[_]: Monad] extends NotificationsRepo
     sql"SELECT id, id_user, text, kind, is_active, dt_to_notificate, period, hour, minute, days, start, finish  FROM notifications WHERE is_active = TRUE AND id_user = ${user.id}"
       .read[NotificationFlatten]
       .toList
-      .map(_.map(_.asInstanceOf[Notification]))
+      .map(_.flatMap(_.toNotification))
   }
 
   override def +=[T <: Notifications.Notification](t: T): BotF[F, T] = botIO {
@@ -117,6 +117,20 @@ final class DoobieNotificationsRepository[F[_]: Monad] extends NotificationsRepo
       .map(_.map(_.toNotification).collect { case Some(x) => x })
   }
 
+
+  override def active(now: LocalDateTime): BotF[F, List[(Long, Notification)]] = botIO {
+    sql"""SELECT u.chat_id, n.id, n.id_user, n.text, n.kind, n.is_active, n.dt_to_notificate, n.period, n.hour, n.minute, n.days, n.start, n.finish
+          FROM notifications n
+          JOIN users u ON n.id_user = u.id
+          WHERE n.is_active = TRUE AND $now > n.dt_to_notificate"""
+      .read[(Long, NotificationFlatten)]
+      .toList
+      .map(_
+        .map { case (chatId, nt) => (chatId, nt.toNotification) }
+        .collect { case (chatId, Some(n)) => (chatId, n) })
+  }
+
+
   override def apply(user: PersistedUser, skip: Int, take: Int): BotF[F, Page[Notification]] = for(
     count   <- activeNotificationsCount(user);
     entries <- pageOfNotifications(user, skip, take)
@@ -126,6 +140,19 @@ final class DoobieNotificationsRepository[F[_]: Monad] extends NotificationsRepo
     sql"UPDATE notifications SET text = $text WHERE id = $id"
       .update
       .run
+      .map(_ => ())
+  }
+
+  private[this] def updateDate(id: Long, localDateTime: LocalDateTime): ConnectionIO[Unit] =
+    sql"UPDATE notifications SET dt_to_notificate = $localDateTime WHERE id = $id"
+    .update
+    .run
+    .map(_ => ())
+
+  override def update(pairs: List[(Long, LocalDateTime)]): BotF[F, Unit] = botIO {
+    pairs
+      .map { case (id, ldt) => updateDate(id, ldt) }
+      .sequence
       .map(_ => ())
   }
 }

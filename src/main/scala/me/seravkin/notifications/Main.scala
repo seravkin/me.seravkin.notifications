@@ -20,7 +20,7 @@ import me.seravkin.notifications.infrastructure.interpreters.ReaderInterpreter
 import me.seravkin.notifications.infrastructure.messages.RequestHandlerSender
 import me.seravkin.notifications.infrastructure.state.{ChatStateRepository, TrieChatStateRepository}
 import me.seravkin.notifications.infrastructure.time.ActualSystemDateTime
-import me.seravkin.notifications.persistance.botio.{DoobieNotificationTasksRepository, DoobieNotificationsRepository, DoobieUsersRepository}
+import me.seravkin.notifications.persistance.botio.{DoobieNotificationsRepository, DoobieUsersRepository}
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
 import me.seravkin.notifications.bot.services.{NotificationChatServiceImpl, PageViewImpl, TimeBeautifyServiceImpl}
@@ -45,7 +45,7 @@ object Main extends IOApp {
   override def run(args: List[String]): IO[ExitCode] = for(
     config  <- Configuration.load();
     source  <- dataSource(config);
-    adapter = new TelegramBotAdapter(config.telegramApiKey, create(config, source, _));
+    adapter = new TelegramBotAdapter(config.telegramApiKey, create(config, source, _)) with Polling;
     _       <- adapter.runSafe()
   ) yield ExitCode.Success
 
@@ -85,7 +85,6 @@ object Main extends IOApp {
 
     val service = NotificationTasksServiceImpl(
       ActualSystemDateTime,
-      new DoobieNotificationTasksRepository[IO],
       new DoobieNotificationsRepository[IO],
       new RequestHandlerSender[BotF[IO, ?]](adapter))
 
@@ -106,6 +105,7 @@ object Main extends IOApp {
   private[this] def dataSource(config: NotificationConfiguration) : IO[HikariDataSource] = IO {
     new HikariDataSource(config.hikariConfig.toHikariConfig)
   }
+
 
 
 

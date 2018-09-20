@@ -31,8 +31,12 @@ final class DatesAst[F[_]: Applicative](random: Random[F]) extends
       case other => other
     }).apply(now))
 
-  override def inTime(hours: Int, minutes: Int): DatesFactory[F] = ReaderT(now =>
-    Applicative[F].pure(Periodic(hours, minutes, (0 until 7).toSet, None, None)(now).asRight[String])
+  override def inTime(hours: Int, minutes: Int): DatesFactory[F] = ReaderT(now => Applicative[F].pure {
+      Periodic(hours, minutes, (0 until 7).toSet, None, None)(now) match {
+        case Some(periodic) => Right(periodic)
+        case None => Left(s"Напоминание не будет запущено т.к. $now позже даты конца напоминаний")
+      }
+    }
   )
 
   override def dayOfWeek(weekOffset: Int, dayOfWeek: Int): DatesFactory[F] = factoryFor { now =>
@@ -69,7 +73,7 @@ final class DatesAst[F[_]: Applicative](random: Random[F]) extends
       case (Right(OneDate(dt)), Right(OneDate(tm))) =>
         Right(OneDate(dt.withHour(tm.getHour).withMinute(tm.getMinute)))
       case _ =>
-        Left(s"Type error of $date and $time")
+        Left(s"Ошибка типов для $date и $time")
     }
 
   override def fuzzyTime(period: parsing.Period): DatesFactory[F] = ReaderT { now =>
@@ -87,7 +91,7 @@ final class DatesAst[F[_]: Applicative](random: Random[F]) extends
       case Right(OneDate(dt)) =>
         Right(Confirmation(dt, duration.getOrElse(Duration.ofMinutes(5))))
       case Right(value) =>
-        Left(s"Type error. Expected OneDate, got $value")
+        Left(s"Ошибка типа для $value")
       case other => other
     }
 

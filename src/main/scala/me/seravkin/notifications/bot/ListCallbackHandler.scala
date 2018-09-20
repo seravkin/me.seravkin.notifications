@@ -28,6 +28,9 @@ object ListCallbackHandler {
              _ <- pageView.editPage(msgId, user, chatId, skip, take))
           yield ()
 
+      case HasMessage(ContainsData(DeleteNotification(_, notificationId, _))) =>
+        notificationsRepository.deactivate(notificationId :: Nil)
+
       case HasMessage(ContainsData(ChangeNotificationTimeAndMenu(msgId, notificationId, _))) =>
         for (_ <- notificationsRepository.deactivate(notificationId :: Nil);
              _ <- notificationChatService.changeNotificationDate(chatId, notificationId))

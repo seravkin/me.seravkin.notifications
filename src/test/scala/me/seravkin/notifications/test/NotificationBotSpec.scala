@@ -4,12 +4,12 @@ import java.time.LocalDateTime
 
 import cats._
 import cats.data._
-import cats.effect.IO
 import cats.syntax.all._
 import info.mukel.telegrambot4s.methods.SendMessage
 import info.mukel.telegrambot4s.models._
 import me.seravkin.notifications.bot.NotificationBot
 import me.seravkin.notifications.bot._
+import me.seravkin.notifications.bot.commands.DeleteNotification
 import me.seravkin.notifications.bot.services.{NotificationChatServiceImpl, PageViewImpl, TimeBeautifyServiceImpl}
 import me.seravkin.notifications.domain.Notifications.Notification
 import me.seravkin.notifications.domain.PersistedUser
@@ -21,7 +21,6 @@ import me.seravkin.notifications.infrastructure.state.ChatStateRepository
 import me.seravkin.notifications.infrastructure.time.{ActualSystemDateTime, SystemDateTime}
 import me.seravkin.notifications.persistance.NotificationsRepository
 import org.scalatest._
-import shapeless._
 import me.seravkin.notifications.test.mocks._
 import me.seravkin.tg.adapter.Bot
 import me.seravkin.tg.adapter.events._
@@ -36,7 +35,7 @@ class NotificationBotSpec extends FlatSpec with Matchers {
       _ <- shouldAnswerWith(sentMessage)(hasExpected(helpText))
     ) yield ()
 
-    dialogue.run(MockBotState(defaultUser :: Nil)).unsafeRunSync()
+    dialogue.run(MockBotState(defaultUser :: Nil))
   }
 
   it should "show help on start command too" in {
@@ -45,7 +44,7 @@ class NotificationBotSpec extends FlatSpec with Matchers {
       _ <- shouldAnswerWith(sentMessage)(hasExpected(helpText))
     ) yield ()
 
-    dialogue.run(MockBotState(defaultUser :: Nil)).unsafeRunSync()
+    dialogue.run(MockBotState(defaultUser :: Nil))
   }
 
   it should "show active notifications for current user if they are present when show command is sent" in {
@@ -59,7 +58,7 @@ class NotificationBotSpec extends FlatSpec with Matchers {
 
     dialogue
       .run(MockBotState(defaultUser :: Nil, notifications = existingNotifications.toList))
-      .unsafeRunSync()
+
   }
 
   it should "deny access for not authorized user" in {
@@ -68,7 +67,7 @@ class NotificationBotSpec extends FlatSpec with Matchers {
       _ <- shouldAnswerWith(sentMessage)(hasExpected("Пользователь не аутентифицирован для данного сервиса"))
     ) yield ()
 
-    dialogue.run(MockBotState(users = defaultUser :: Nil)).unsafeRunSync()
+    dialogue.run(MockBotState(users = defaultUser :: Nil))
   }
 
   it should "make active notification for current user unactive when delete command is sent if id is correct" in {
@@ -80,7 +79,7 @@ class NotificationBotSpec extends FlatSpec with Matchers {
 
     val (state, _) = dialogue
         .run(MockBotState(defaultUser :: Nil, notifications = existingNotifications.toList))
-        .unsafeRunSync()
+
 
     val changedNotification = state.notifications.find(_.id == 1)
 
@@ -98,7 +97,7 @@ class NotificationBotSpec extends FlatSpec with Matchers {
       _  <- shouldAnswerWith(sentMessage)(hasExpected("Напоминание поставлено и будет отправлено 23.08 в 12:35"))
     ) yield ()
 
-    val (state, _) = dialogue.run(MockBotState(users = defaultUser :: Nil)).unsafeRunSync()
+    val (state, _) = dialogue.run(MockBotState(users = defaultUser :: Nil))
 
     state.notifications.length should be (1)
 
@@ -119,7 +118,7 @@ class NotificationBotSpec extends FlatSpec with Matchers {
       _  <- shouldAnswerWith(sentMessage)(hasExpected("Напоминание поставлено и будет отправлено 23.08 в 00:32"))
     ) yield ()
 
-    val (state, _) = dialogue.run(MockBotState(users = defaultUser :: Nil)).unsafeRunSync()
+    val (state, _) = dialogue.run(MockBotState(users = defaultUser :: Nil))
 
     state.notifications.length should be (1)
 
@@ -136,7 +135,7 @@ class NotificationBotSpec extends FlatSpec with Matchers {
       _  <- shouldAnswerWith(sentMessage)(hasExpected("Создание напоминания отменено"))
     ) yield ()
 
-    val (state, _) = dialogue.run(MockBotState(users = defaultUser :: Nil)).unsafeRunSync()
+    val (state, _) = dialogue.run(MockBotState(users = defaultUser :: Nil))
 
     state.notifications.length should be (0)
   }
@@ -147,7 +146,7 @@ class NotificationBotSpec extends FlatSpec with Matchers {
       _  <- shouldAnswerWith(sentMessage)(hasExpected("Напоминание поставлено и будет отправлено в 08:49"))
     ) yield ()
 
-    val (state, _) = dialogue.run(MockBotState(users = defaultUser :: Nil)).unsafeRunSync()
+    val (state, _) = dialogue.run(MockBotState(users = defaultUser :: Nil))
 
     state.notifications.length should be (1)
 
@@ -166,7 +165,7 @@ class NotificationBotSpec extends FlatSpec with Matchers {
 
     dialogue
       .run(MockBotState(defaultUser :: Nil, notifications = existingNotifications.toList))
-      .unsafeRunSync()
+
 
   }
 
@@ -179,7 +178,7 @@ class NotificationBotSpec extends FlatSpec with Matchers {
 
     dialogue
       .run(MockBotState(defaultUser :: Nil, notifications = existingNotifications.toList))
-      .unsafeRunSync()
+
   }
 
   it should "show list command with forward button when there are more messages and updates to show more" in {
@@ -203,7 +202,7 @@ class NotificationBotSpec extends FlatSpec with Matchers {
 
     dialogue
       .run(MockBotState(defaultUser :: Nil, notifications = existingNotifications.toList))
-      .unsafeRunSync()
+
   }
 
   it should "show list command with buttons that open message edit menu" in {
@@ -222,7 +221,7 @@ class NotificationBotSpec extends FlatSpec with Matchers {
 
     dialogue
       .run(MockBotState(defaultUser :: Nil, notifications = existingNotifications.toList))
-      .unsafeRunSync()
+
   }
 
   it should "show edit menu and allow notification date change" in {
@@ -241,7 +240,18 @@ class NotificationBotSpec extends FlatSpec with Matchers {
 
     dialogue
       .run(MockBotState(defaultUser :: Nil, notifications = existingNotifications.toList))
-      .unsafeRunSync()
+
+  }
+
+  it should "delete notification with callback" in {
+    val dialogue = for(
+      _ <- sendCallback(DeleteNotification(0, 1, ""));
+      _ <- send("/list");
+      _ <- shouldAnswerWith(sentMessage)(_.text shouldNot contain ("test 1"))
+    ) yield ()
+
+    dialogue
+      .run(MockBotState(defaultUser :: Nil, notifications = existingNotifications.filter(_.id != 1).toList))
   }
 
   it should "show edit menu and allow notification text change" in {
@@ -264,7 +274,7 @@ class NotificationBotSpec extends FlatSpec with Matchers {
 
     dialogue
       .run(MockBotState(defaultUser :: Nil, notifications = existingNotifications.toList))
-      .unsafeRunSync()
+
   }
 
   it should "show edit menu and allow notification delete" in {
@@ -285,7 +295,7 @@ class NotificationBotSpec extends FlatSpec with Matchers {
 
     dialogue
       .run(MockBotState(defaultUser :: Nil, notifications = existingNotifications.toList))
-      .unsafeRunSync()
+
   }
 
   it should "work correctly in longer dialogue with creating, showing and deleting notifications" in {
@@ -305,7 +315,7 @@ class NotificationBotSpec extends FlatSpec with Matchers {
       _ <- shouldAnswerWithTextThat(t => t.contains("test 2") && t.contains("test 3"))
     ) yield ()
 
-    val (state, _) = dialogue.run(MockBotState(users = defaultUser :: Nil)).unsafeRunSync()
+    val (state, _) = dialogue.run(MockBotState(users = defaultUser :: Nil))
 
     state.notifications.length should be (3)
   }
@@ -320,7 +330,7 @@ class NotificationBotSpec extends FlatSpec with Matchers {
       _ <- shouldAnswerWith(sentMessage)(hasExpected("Напоминание поставлено и будет отправлено в 23:57"))
     ) yield ()
 
-    dialogue.run(MockBotState(users = defaultUser :: Nil)).unsafeRunSync()
+    dialogue.run(MockBotState(users = defaultUser :: Nil))
   }
 
   it should "warn if notification id does not exist" in {
@@ -331,7 +341,7 @@ class NotificationBotSpec extends FlatSpec with Matchers {
       _ <- shouldAnswerWith(sentMessage)(hasExpected("Напоминание с id 5 не найдено"))
     ) yield ()
 
-    dialogue.run(MockBotState(users = defaultUser :: Nil)).unsafeRunSync()
+    dialogue.run(MockBotState(users = defaultUser :: Nil))
   }
 
   private[this] def sendCallback(command: String, user: User = defaultTgUser) =
@@ -353,7 +363,7 @@ class NotificationBotSpec extends FlatSpec with Matchers {
     list.last
   }
 
-  private[this] def shouldAnswerWith(f: List[MockMessage] => MockMessage)(assert: MockMessage => Assertion) = StateT.get[IO, MockBotState] map { state =>
+  private[this] def shouldAnswerWith(f: List[MockMessage] => MockMessage)(assert: MockMessage => Assertion) = StateT.get[Id, MockBotState] map { state =>
     val msg = f(state.sentMessages)
 
     assert(msg)
@@ -401,7 +411,7 @@ class NotificationBotSpec extends FlatSpec with Matchers {
   )
 
   private[this] val random: Random[MockBotF] =
-    (int: Int) => StateT.pure[IO, MockBotState, Int](new util.Random(1).nextInt(int))
+    (int: Int) => StateT.pure[Id, MockBotState, Int](new util.Random(1).nextInt(int))
 
   private[this] val parser = new CombinatorMomentInFutureParser(
     new DatesAst[MockBotF](random),
