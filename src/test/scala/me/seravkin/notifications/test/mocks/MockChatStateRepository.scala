@@ -1,12 +1,9 @@
 package me.seravkin.notifications.test.mocks
 
 import cats.Applicative
-import cats.data.{State, StateT}
-import cats.effect.IO
-import cats.syntax.all._
+import cats.data.StateT
 import me.seravkin.notifications.bot.ChatState
 import me.seravkin.notifications.infrastructure.state.ChatStateRepository
-import me.seravkin.notifications.test.MockBotF
 import me.seravkin.notifications.test.mocks.MockBotState._
 
 final class MockChatStateRepository[F[_]: Applicative] extends ChatStateRepository[ChatState, StateT[F, MockBotState, ?]] {

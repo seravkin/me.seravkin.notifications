@@ -1,13 +1,12 @@
 package me.seravkin.notifications.domain.services
 
-import java.sql.Timestamp
 
 import cats._
 import cats.instances.list._
 import cats.syntax.all._
 import me.seravkin.notifications.bot.commands.{ChangeNotificationTime, DeleteNotification}
-import me.seravkin.notifications.domain.Notifications.{Notification, NotificationTask}
-import me.seravkin.notifications.domain.interpreter.{Confirmation, OneDate, Periodic}
+import me.seravkin.notifications.domain.Notifications.Notification
+import me.seravkin.notifications.domain.interpreter.Dates._
 import me.seravkin.notifications.infrastructure.messages.{Button, Sender}
 import me.seravkin.notifications.infrastructure.time.SystemDateTime
 import me.seravkin.notifications.persistance.NotificationsRepository
@@ -26,7 +25,7 @@ case class NotificationTasksServiceImpl[F[_]: Monad](systemDateTime: SystemDateT
     Button("Перенести", ChangeNotificationTime(notification.id)) ::
       (notification.dates match {
 
-        case d: OneDate => Nil
+        case _: OneDate => Nil
         case _ => Button("Отменить", DeleteNotification(0, notification.id, "")) :: Nil
       })
 

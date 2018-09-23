@@ -3,12 +3,10 @@ package me.seravkin.notifications.test.parsing
 import java.time.{Duration, LocalDateTime}
 
 import cats.Id
-import me.seravkin.notifications.domain.interpreter.{DatesAst, OneDate}
-import me.seravkin.notifications.domain.parsing._
-import me.seravkin.notifications.infrastructure.random.Random
-import org.scalatest.{FlatSpec, FunSuite, Matchers}
-
-import scala.util
+import me.seravkin.notifications.domain.interpreter.Dates.OneDate
+import me.seravkin.notifications.domain.interpreter.DatesAst
+import me.seravkin.notifications.domain.parsing.Period.Morning
+import org.scalatest.{FlatSpec, Matchers}
 
 class NotificationProgramSpec  extends FlatSpec with Matchers  {
 

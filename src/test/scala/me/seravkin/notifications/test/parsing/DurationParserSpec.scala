@@ -2,10 +2,11 @@ package me.seravkin.notifications.test.parsing
 
 import java.time.Duration
 
-import me.seravkin.notifications.domain.internationalization.LegacyInternationalization
 import me.seravkin.notifications.domain.interpreter.NotificationProgramAst
+import me.seravkin.notifications.domain.parsing.NotificationProgram._
+import me.seravkin.notifications.domain.parsing.Period._
 import me.seravkin.notifications.domain.parsing._
-import org.scalatest.{FlatSpec, FunSuite, Matchers}
+import org.scalatest.{FlatSpec, Matchers}
 
 class DurationParserSpec extends FlatSpec with Matchers {
 

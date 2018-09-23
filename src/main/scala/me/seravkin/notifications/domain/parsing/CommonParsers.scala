@@ -1,7 +1,6 @@
 package me.seravkin.notifications.domain.parsing
 
 import java.time.Duration
-import java.time.format.DateTimeFormatter
 
 import me.seravkin.notifications.domain.internationalization.Words._
 

@@ -2,6 +2,7 @@ package me.seravkin.notifications.domain.interpreter
 
 import java.time.Duration
 
+import me.seravkin.notifications.domain.parsing.NotificationProgram._
 import me.seravkin.notifications.domain.parsing._
 
 object NotificationProgramAst extends MomentInFutureAst[NotificationProgram] with RecurrentAst[NotificationProgram] {

@@ -1,20 +1,12 @@
 package me.seravkin.notifications
 
 import cats._
-import cats.implicits._
 import info.mukel.telegrambot4s.models.CallbackQuery
+import me.seravkin.notifications.bot.ChatState.Nop
 import me.seravkin.notifications.domain.Notifications.Notification
-import me.seravkin.notifications.domain.interpreter._
+import me.seravkin.notifications.domain.interpreter.Dates.OneDate
 
 package object bot {
-
-  sealed trait ChatState
-
-  final case object Nop extends ChatState
-  final case object InControlWaitingForText extends ChatState
-  final case class InControlWaitingForTextEdit(notificationId: Long) extends ChatState
-  final case class InControlWaitingForTime(chatId: Long, text: String) extends ChatState
-  final case class InControlWaitingForConfirmation(chatId: Long, text: String, time: String) extends ChatState
 
   type BotHandler[Msg, F[_]] = PartialFunction[(ChatState, Msg), F[Unit]]
 

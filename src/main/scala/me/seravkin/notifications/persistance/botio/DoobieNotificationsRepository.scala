@@ -2,21 +2,20 @@ package me.seravkin.notifications.persistance.botio
 
 import java.time.{Duration, LocalDateTime}
 
+import cats._
+import cats.implicits._
 import doobie._
 import doobie.implicits._
-import cats._
-import cats.data.ReaderT
-import cats.implicits._
 import me.seravkin.notifications.domain.Notifications._
-import me.seravkin.notifications.domain.interpreter._
+import me.seravkin.notifications.domain.interpreter.Dates._
 import me.seravkin.notifications.domain.{Notifications, PersistedUser}
 import me.seravkin.notifications.infrastructure.BotF
-import me.seravkin.notifications.persistance.{NotificationsRepository, Page, botio}
+import me.seravkin.notifications.persistance.{NotificationsRepository, Page}
 
 
 final class DoobieNotificationsRepository[F[_]: Monad] extends NotificationsRepository[BotF[F, ?]] with BotIORepository[F] {
 
-  private final case class NotificationFlatten(id: Long, userId: Long, text: String, kind: String,
+  private[this] case class NotificationFlatten(id: Long, userId: Long, text: String, kind: String,
                                                isActive: Boolean,
                                                dateToNotificate: Option[LocalDateTime] = None,
                                                periodInSeconds: Option[Long] = None,
@@ -93,12 +92,12 @@ final class DoobieNotificationsRepository[F[_]: Monad] extends NotificationsRepo
 
   override def deactivate(ids: List[Long]): BotF[F, Unit] = botIO {
     ids match {
-      case any :: xs =>
+      case Nil => ().pure[ConnectionIO]
+      case _ =>
         (fr"UPDATE notifications set is_active = FALSE WHERE " ++ Fragments.in(fr"id", ids.toNel.get))
           .update
           .run
           .map(x => ())
-      case _ => ().pure[ConnectionIO]
     }
   }
 

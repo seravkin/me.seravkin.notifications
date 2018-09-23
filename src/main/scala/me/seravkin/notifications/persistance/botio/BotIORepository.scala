@@ -1,11 +1,9 @@
 package me.seravkin.notifications.persistance.botio
 
 import cats._
-import cats.implicits._
-import cats.effect._
 import cats.data._
 import doobie._
-import doobie.implicits.{toConnectionIOOps, _}
+import doobie.implicits.toConnectionIOOps
 import fs2.Stream
 
 trait BotIORepository[F[_]] {

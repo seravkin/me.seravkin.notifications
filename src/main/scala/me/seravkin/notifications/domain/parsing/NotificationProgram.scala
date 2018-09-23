@@ -1,46 +1,11 @@
-package me.seravkin.notifications.domain
+package me.seravkin.notifications.domain.parsing
 
-import java.time.{Duration, LocalDate, LocalDateTime}
+import java.time.Duration
 
-import me.seravkin.notifications.domain.Notifications.Notification
-import me.seravkin.notifications.domain.internationalization.Words.DayOfWeek
+sealed trait NotificationProgram
 
-import scala.util.Random
-
-package object parsing {
-
-  trait RecurrentAst[T] {
-    def everyDayOfWeek(days: Set[Int], t: T): T
-    def before(day: Int, month: Int, year: Option[Int], recurrent: T): T
-    def after(day: Int, month: Int, year: Option[Int], recurrent: T): T
-    def inTime(hours: Int, minutes: Int): T
-  }
-
-  trait MomentInFutureAst[T] {
-
-    def dayOfWeek(weekOffset: Int, dayOfWeek: Int): T
-
-    def inDays(days: Int): T
-
-    def duration(duration: Duration): T
-
-    def date(day: Int, month: Int, year: Int): T
-    def date(day: Int, month: Int): T
-    
-    def time(hours: Int, minutes: Int): T
-    def inCurrentTime: T
-
-    def dateAndTime(date: T, time: T): T
-
-    def fuzzyTime(period: Period): T
-
-    def forUser(username: String, t: T): T
-    def confirmation(duration: Option[Duration], t: T): T
-
-  }
-
-  sealed trait NotificationProgram
-
+object NotificationProgram {
+  
   final case class ForUser(username: String, notificationProgram: NotificationProgram) extends NotificationProgram
 
   sealed trait Recurrent extends NotificationProgram
@@ -69,10 +34,6 @@ package object parsing {
 
   final case class WithConfirmation(duration: Option[Duration], notificationProgram: NotificationProgram) extends MomentInFuture
 
-  sealed trait Period { def period: (Int, Int); }
-  final case object Night extends Period { override def period: (Int, Int) = 0 -> 8 }
-  final case object Morning extends Period { override def period: (Int, Int) = 8 -> 12 }
-  final case object DayAsTime extends Period { override def period: (Int, Int) = 12 -> 19 }
-  final case object Evening extends Period { override def period: (Int, Int) = 19 -> 23 }
 
 }
+

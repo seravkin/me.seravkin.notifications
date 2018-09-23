@@ -3,7 +3,7 @@ import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
 import me.seravkin.notifications.domain.interpreter
-import me.seravkin.notifications.domain.interpreter._
+import me.seravkin.notifications.domain.interpreter.Dates._
 import me.seravkin.notifications.infrastructure.time.SystemDateTime
 
 final class TimeBeautifyServiceImpl(systemDateTime: SystemDateTime) extends TimeBeautifyService {

@@ -2,7 +2,7 @@ package me.seravkin.notifications.test.interpreter
 
 import java.time.{Duration, LocalDateTime}
 
-import me.seravkin.notifications.domain.interpreter._
+import me.seravkin.notifications.domain.interpreter.Dates._
 import org.scalatest.{FlatSpec, Matchers}
 
 class DatesSpec extends FlatSpec with Matchers {

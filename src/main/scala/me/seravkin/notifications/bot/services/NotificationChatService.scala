@@ -1,7 +1,5 @@
 package me.seravkin.notifications.bot.services
 
-import java.time.LocalDateTime
-
 import me.seravkin.notifications.domain.PersistedUser
 import me.seravkin.notifications.domain.interpreter.Dates
 

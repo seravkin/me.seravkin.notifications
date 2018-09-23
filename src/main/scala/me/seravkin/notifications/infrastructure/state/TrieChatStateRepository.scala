@@ -1,6 +1,5 @@
 package me.seravkin.notifications.infrastructure.state
 
-import cats._
 import cats.effect.Sync
 import cats.implicits._
 

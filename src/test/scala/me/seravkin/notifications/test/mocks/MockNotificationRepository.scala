@@ -2,9 +2,8 @@ package me.seravkin.notifications.test.mocks
 
 import java.time.LocalDateTime
 
-import cats.data.{State, StateT}
 import cats._
-import cats.syntax.all._
+import cats.data.StateT
 import me.seravkin.notifications.domain.Notifications.Notification
 import me.seravkin.notifications.domain.PersistedUser
 import me.seravkin.notifications.persistance.{NotificationsRepository, Page}

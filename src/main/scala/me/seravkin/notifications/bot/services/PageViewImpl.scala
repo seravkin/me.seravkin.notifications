@@ -1,7 +1,6 @@
 package me.seravkin.notifications.bot.services
 
 import cats._
-import cats.data._
 import cats.implicits._
 import me.seravkin.notifications.bot._
 import me.seravkin.notifications.bot.commands.{ChangePage, OpenNotificationMenu}

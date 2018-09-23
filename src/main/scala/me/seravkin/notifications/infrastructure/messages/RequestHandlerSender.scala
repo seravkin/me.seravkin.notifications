@@ -1,16 +1,10 @@
 package me.seravkin.notifications.infrastructure.messages
 
-import cats._
+import cats.effect.Sync
 import cats.implicits._
-import cats.data._
-import cats.effect.{IO, Sync}
-import doobie.util.transactor.Transactor
 import info.mukel.telegrambot4s.methods.{EditMessageText, SendMessage}
 import info.mukel.telegrambot4s.models.{InlineKeyboardButton, InlineKeyboardMarkup}
-import me.seravkin.notifications.bot.Nop
 import me.seravkin.tg.adapter.requests.RequestHandlerF
-
-import scala.util.Random
 
 final class RequestHandlerSender[F[_]: Sync](requestHandlerF: RequestHandlerF[F]) extends Sender[F] {
 

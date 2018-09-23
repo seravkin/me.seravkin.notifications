@@ -2,8 +2,6 @@ package me.seravkin.notifications.persistance.botio
 
 import cats._
 import cats.data._
-import cats.implicits._
-import doobie._
 import doobie.implicits._
 import me.seravkin.notifications.domain.PersistedUser
 import me.seravkin.notifications.infrastructure.BotF

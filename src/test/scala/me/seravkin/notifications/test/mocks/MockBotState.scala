@@ -2,11 +2,10 @@ package me.seravkin.notifications.test.mocks
 
 import java.time.LocalDateTime
 
-import info.mukel.telegrambot4s.models.Message
-import me.seravkin.notifications.bot.{ChatState, Nop}
+import me.seravkin.notifications.bot.ChatState
+import me.seravkin.notifications.bot.ChatState._
 import me.seravkin.notifications.domain.Notifications.Notification
 import me.seravkin.notifications.domain.PersistedUser
-import me.seravkin.tg.adapter.events.BotEvent
 import shapeless._
 
 final case class MockBotState(users: List[PersistedUser] = Nil,

@@ -3,14 +3,10 @@ package me.seravkin.notifications.test
 import java.time.{Duration, LocalDateTime}
 
 import cats._
-import cats.implicits._
-import cats.effect._
-import me.seravkin.notifications.bot.commands.ChangeNotificationTime
 import me.seravkin.notifications.domain.Notifications.Notification
 import me.seravkin.notifications.domain.PersistedUser
-import me.seravkin.notifications.domain.interpreter._
+import me.seravkin.notifications.domain.interpreter.Dates._
 import me.seravkin.notifications.domain.services.{NotificationTasksService, NotificationTasksServiceImpl}
-import me.seravkin.notifications.infrastructure.messages.Button
 import me.seravkin.notifications.test.mocks._
 import org.scalatest.{FlatSpec, Matchers}
 

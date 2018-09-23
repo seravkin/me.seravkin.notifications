@@ -4,6 +4,7 @@ import cats._
 import cats.data._
 import cats.implicits._
 import info.mukel.telegrambot4s.models.CallbackQuery
+import me.seravkin.notifications.bot.ChatState.InControlWaitingForTextEdit
 import me.seravkin.notifications.bot.commands._
 import me.seravkin.notifications.bot.services.{NotificationChatService, PageView}
 import me.seravkin.notifications.domain.PersistedUser
@@ -31,12 +32,12 @@ object ListCallbackHandler {
       case HasMessage(ContainsData(DeleteNotification(_, notificationId, _))) =>
         notificationsRepository.deactivate(notificationId :: Nil)
 
-      case HasMessage(ContainsData(ChangeNotificationTimeAndMenu(msgId, notificationId, _))) =>
+      case HasMessage(ContainsData(ChangeNotificationTimeAndMenu(_, notificationId, _))) =>
         for (_ <- notificationsRepository.deactivate(notificationId :: Nil);
              _ <- notificationChatService.changeNotificationDate(chatId, notificationId))
           yield ()
 
-      case HasMessage(ContainsData(ChangeNotificationText(msgId, notificationId, _))) =>
+      case HasMessage(ContainsData(ChangeNotificationText(_, notificationId, _))) =>
         for(_ <- chatStateRepository.set(chatId, InControlWaitingForTextEdit(notificationId));
             _ <- sender.ask(chatId, "Введите желаемый текст для напоминания:"))
           yield ()

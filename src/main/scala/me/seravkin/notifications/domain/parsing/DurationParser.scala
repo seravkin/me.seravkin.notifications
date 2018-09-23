@@ -4,7 +4,6 @@ import me.seravkin.notifications.domain.internationalization.Internationalizatio
 import me.seravkin.notifications.domain.internationalization.Words._
 
 import scala.util.parsing.combinator.RegexParsers
-import scala.util.parsing.input.CharSequenceReader
 
 final class DurationParser[T](i8ln: Internationalization, futureAst: MomentInFutureAst[T], recAst: RecurrentAst[T])
   extends RegexParsers with TimeConstants with CommonParsers[T]

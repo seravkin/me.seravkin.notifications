@@ -3,7 +3,6 @@ package me.seravkin.notifications.infrastructure.interpreters
 import java.sql.Connection
 
 import cats._
-import cats.implicits._
 import cats.data._
 import cats.effect.ExitCase.Completed
 import cats.effect._

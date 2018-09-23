@@ -2,8 +2,8 @@ package me.seravkin.notifications.domain.parsing
 
 import java.time.Duration
 
-import me.seravkin.notifications.domain.internationalization.Internationalization
 import me.seravkin.notifications.domain.internationalization.Words._
+import me.seravkin.notifications.domain.parsing.Period._
 
 import scala.util.parsing.combinator.RegexParsers
 

@@ -4,28 +4,21 @@ import java.time.LocalDateTime
 
 import cats._
 import cats.data._
-import cats.syntax.all._
-import info.mukel.telegrambot4s.methods.SendMessage
 import info.mukel.telegrambot4s.models._
 import me.seravkin.notifications.bot.NotificationBot
-import me.seravkin.notifications.bot._
 import me.seravkin.notifications.bot.commands.DeleteNotification
 import me.seravkin.notifications.bot.services.{NotificationChatServiceImpl, PageViewImpl, TimeBeautifyServiceImpl}
 import me.seravkin.notifications.domain.Notifications.Notification
 import me.seravkin.notifications.domain.PersistedUser
+import me.seravkin.notifications.domain.interpreter.Dates.{OneDate, Periodic}
 import me.seravkin.notifications.domain.interpreter._
 import me.seravkin.notifications.domain.parsing.CombinatorMomentInFutureParser
-import me.seravkin.notifications.infrastructure.messages.{Button, Sender}
+import me.seravkin.notifications.infrastructure.messages.Button
 import me.seravkin.notifications.infrastructure.random.Random
-import me.seravkin.notifications.infrastructure.state.ChatStateRepository
-import me.seravkin.notifications.infrastructure.time.{ActualSystemDateTime, SystemDateTime}
-import me.seravkin.notifications.persistance.NotificationsRepository
-import org.scalatest._
+import me.seravkin.notifications.infrastructure.time.SystemDateTime
 import me.seravkin.notifications.test.mocks._
-import me.seravkin.tg.adapter.Bot
 import me.seravkin.tg.adapter.events._
-
-import scala.util
+import org.scalatest._
 
 class NotificationBotSpec extends FlatSpec with Matchers {
 

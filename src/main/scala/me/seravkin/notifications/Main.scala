@@ -1,44 +1,31 @@
 package me.seravkin.notifications
 
-import java.io.File
-import java.nio.file.{Files, Path, Paths}
-import java.sql.Connection
 import java.util.concurrent.TimeUnit
 
-import cats._
 import cats.data._
-import cats.implicits._
 import cats.effect.{ExitCode, IO, IOApp, Sync}
-import com.typesafe.config.ConfigFactory
-import doobie.free.KleisliInterpreter
-import doobie.free.connection.unit
-import doobie.util.transactor.{Strategy, Transactor}
-import info.mukel.telegrambot4s.api.{Polling, RequestHandler, TelegramBot}
-import info.mukel.telegrambot4s.models.{CallbackQuery, ChatType, Message}
-import me.seravkin.notifications.domain.parsing.CombinatorMomentInFutureParser
-import me.seravkin.notifications.infrastructure.interpreters.ReaderInterpreter
-import me.seravkin.notifications.infrastructure.messages.RequestHandlerSender
-import me.seravkin.notifications.infrastructure.state.{ChatStateRepository, TrieChatStateRepository}
-import me.seravkin.notifications.infrastructure.time.ActualSystemDateTime
-import me.seravkin.notifications.persistance.botio.{DoobieNotificationsRepository, DoobieUsersRepository}
-import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
+import info.mukel.telegrambot4s.api.{Polling, RequestHandler}
+import me.seravkin.notifications.bot.ChatState.Nop
 import me.seravkin.notifications.bot.services.{NotificationChatServiceImpl, PageViewImpl, TimeBeautifyServiceImpl}
-import me.seravkin.notifications.bot.{ChatState, Nop, NotificationBot}
+import me.seravkin.notifications.bot.{ChatState, NotificationBot}
 import me.seravkin.notifications.domain.interpreter.DatesAst
+import me.seravkin.notifications.domain.parsing.CombinatorMomentInFutureParser
 import me.seravkin.notifications.domain.services.NotificationTasksServiceImpl
 import me.seravkin.notifications.infrastructure.BotF
 import me.seravkin.notifications.infrastructure.config.Configuration
 import me.seravkin.notifications.infrastructure.config.Configuration.NotificationConfiguration
+import me.seravkin.notifications.infrastructure.interpreters.ReaderInterpreter
+import me.seravkin.notifications.infrastructure.messages.RequestHandlerSender
 import me.seravkin.notifications.infrastructure.random.SyncRandom
-import monix.eval.Task
-import monix.execution.Scheduler.Implicits.global
-import me.seravkin.tg.adapter.events.BotEvent
+import me.seravkin.notifications.infrastructure.state.{ChatStateRepository, TrieChatStateRepository}
+import me.seravkin.notifications.infrastructure.time.ActualSystemDateTime
+import me.seravkin.notifications.persistance.botio.{DoobieNotificationsRepository, DoobieUsersRepository}
 import me.seravkin.tg.adapter.requests.{RequestHandlerAdapter, RequestHandlerF}
 import me.seravkin.tg.adapter.{Bot, TelegramBotAdapter}
+import monix.execution.Scheduler.Implicits.global
 
 import scala.collection.concurrent.TrieMap
-import scala.util.{Failure, Success, Try}
 
 object Main extends IOApp {
 
@@ -93,7 +80,7 @@ object Main extends IOApp {
     val interpreterK = new ReaderInterpreter(source.getConnection)
 
     IO {
-      global.scheduleWithFixedDelay(config.secondsForScheduler, config.secondsForScheduler, TimeUnit.SECONDS, () => {
+      global.scheduleWithFixedDelay(config.secondsForScheduler.toLong, config.secondsForScheduler.toLong, TimeUnit.SECONDS, () => {
         interpreterK(service.sendNotificationsIfNeeded()).unsafeRunSync()
       })
 
