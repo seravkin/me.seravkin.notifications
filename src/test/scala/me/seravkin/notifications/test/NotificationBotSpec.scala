@@ -45,7 +45,7 @@ class NotificationBotSpec extends FlatSpec with Matchers {
       _ <- send("/show");
       _ <- shouldAnswerWith(sentMessage)(hasExpected("Напоминания:\n\n" +
         "Напоминание 1 о \"test 1\" в 2018-12-01T12:00\n" +
-        "Напоминание 3 о \"rec test 1\""))
+        "Напоминание 3 о \"rec test 1\" в каждый из дней: вторник в 10:10 "))
     ) yield ()
 
 
@@ -153,7 +153,7 @@ class NotificationBotSpec extends FlatSpec with Matchers {
       _ <- send("/list");
       _ <- shouldAnswerWith(sentMessage)(hasExpected("Напоминания:\n\n" +
         "Напоминание 1 о \"test 1\" в 2018-12-01T12:00\n" +
-        "Напоминание 3 о \"rec test 1\"", Some(Nil)))
+        "Напоминание 3 о \"rec test 1\" в каждый из дней: вторник в 10:10 ", Some(Nil)))
     ) yield ()
 
     dialogue

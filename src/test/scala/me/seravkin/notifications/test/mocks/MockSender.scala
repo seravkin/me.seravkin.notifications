@@ -1,9 +1,7 @@
 package me.seravkin.notifications.test.mocks
 
-import cats.data.{State, StateT}
 import cats._
-import cats.syntax.all._
-import info.mukel.telegrambot4s.models.Message
+import cats.data.StateT
 import me.seravkin.notifications.domain.PersistedUser
 import me.seravkin.notifications.infrastructure.messages.{Button, Sender}
 import me.seravkin.notifications.test.mocks.MockBotState._

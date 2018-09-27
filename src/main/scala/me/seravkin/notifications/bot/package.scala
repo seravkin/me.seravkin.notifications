@@ -4,7 +4,9 @@ import cats._
 import info.mukel.telegrambot4s.models.CallbackQuery
 import me.seravkin.notifications.bot.ChatState.Nop
 import me.seravkin.notifications.domain.Notifications.Notification
-import me.seravkin.notifications.domain.interpreter.Dates.OneDate
+import me.seravkin.notifications.domain.internationalization.LegacyInternationalization
+import me.seravkin.notifications.domain.internationalization.Words._
+import me.seravkin.notifications.domain.interpreter.Dates
 
 package object bot {
 
@@ -30,14 +32,32 @@ package object bot {
       Some(arg)
   }
 
+  private val daysMap =
+    List(Monday, Tuesday, Wednesday, Thursday, Friday, Saturday, Sunday)
+    .map(d => (d.toInt, LegacyInternationalization.words(d).head))
+    .toMap
+
+  private def showDay(day: Int): String =
+    daysMap(day)
+
+  implicit val showForDates: Show[Dates] = Show.show {
+    case Dates.OneDate(localDateTime) =>
+      s" в $localDateTime"
+    case Dates.Confirmation(localDateTime, period) =>
+      s" в $localDateTime с подтверждением каждые $period"
+    case Dates.Periodic(_, hour, minutes, days, start, end) =>
+      s" в каждый из дней: ${days.map(showDay).reduce { _ + "," + _ }} в $hour:$minutes " +
+      start.map(d => s"с началом в $d ").getOrElse("") +
+      end.map(d => s"с окончанием в $d").getOrElse("")
+  }
+
   //TODO: Правильное отображение для других типов
   //TODO: выразить через Show[T]
-  implicit val showForListOfNotifications: Show[List[Notification]] = Show.show { notifications =>
+  implicit def showForListOfNotifications(implicit show: Show[Dates]): Show[List[Notification]] = Show.show { notifications =>
     "Напоминания:\n" +
       notifications.collect {
-        case Notification(id, _, text, _, n: OneDate) =>
-          s"Напоминание $id о " + "\"" + text + "\" в " + n.notificationDate.toString
-        case Notification(id, _, text, _, _) => s"Напоминание $id о " + "\"" + text + "\""
+        case Notification(id, _, text, _, n) =>
+          s"Напоминание $id о " + "\"" + text + "\"" + show.show(n)
       }.foldLeft("") {
         _ + "\n" + _
       }

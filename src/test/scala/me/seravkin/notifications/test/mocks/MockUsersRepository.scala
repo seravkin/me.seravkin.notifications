@@ -1,7 +1,7 @@
 package me.seravkin.notifications.test.mocks
 
-import cats.{Applicative, Monad}
-import cats.data.{State, StateT}
+import cats.Monad
+import cats.data.StateT
 import cats.syntax.all._
 import me.seravkin.notifications.domain.PersistedUser
 import me.seravkin.notifications.persistance.UsersRepository
