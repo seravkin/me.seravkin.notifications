@@ -4,6 +4,8 @@ version := "0.3.1"
 
 scalaVersion := "2.12.4"
 
+assemblyJarName in assembly := "me-seravkin-notifications.jar"
+
 scalacOptions ++= Seq(
     "-deprecation",                      // Emit warning and location for usages of deprecated APIs.
     "-encoding", "utf-8",                // Specify character encoding used by source files.

@@ -29,10 +29,12 @@ object Configuration {
   case class NotificationConfiguration(telegramApiKey: String, secondsForScheduler: Int, hikariConfig: HikariConfiguration)
 
   def load(): IO[NotificationConfiguration] = IO {
-    val configPath = Option("notifications.conf").filter(x => Files.exists(Paths.get(x)))
-      .getOrElse(System.getenv("NOTIFICATIONS_CONFIG_PATH"))
+    val configPath = Option("application.conf").filter(x => Files.exists(Paths.get(x)))
+      .orElse(Option(System.getenv("NOTIFICATIONS_CONFIG_PATH")))
 
-    val config = ConfigFactory.parseFile(new File(configPath))
+    val config = configPath
+      .map(f => ConfigFactory.parseFile(new File(f)))
+      .getOrElse(ConfigFactory.load())
 
     NotificationConfiguration(
       config.getString("notifications.bot.key"),
