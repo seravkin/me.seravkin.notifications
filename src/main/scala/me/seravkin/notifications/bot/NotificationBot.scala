@@ -55,10 +55,11 @@ final case class NotificationBot[F[_] : Monad](usersRepository: UsersRepository[
   private[this] def processMessage(user: PersistedUser): (ChatState, Message) => F[Unit] =
     handlers(user)(
       HelpHandler(sender),
+      VersionHandler(sender),
       OldShowHandler(user, notificationsRepository, sender),
       OldEditHandler(notificationsRepository, notificationChatService, sender),
       ListMessageHandler(user, pageView),
-      InMessageHandler(user, chatStateRepository, notificationChatService, notificationsRepository, sender)
+      InMessageHandler(user, systemDateTime, chatStateRepository, notificationChatService, notificationsRepository, sender)
     )
 
   private[this] def processCallbackQuery(user: PersistedUser): (ChatState, CallbackQuery) => F[Unit] =
