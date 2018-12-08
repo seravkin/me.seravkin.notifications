@@ -3,10 +3,13 @@ package me.seravkin.notifications
 import java.util.concurrent.TimeUnit
 
 import cats.data.Kleisli
-import cats.effect.{Concurrent, Sync}
+import cats.syntax.flatMap._
+import cats.syntax.functor._
+import cats.syntax.applicativeError._
+import cats.effect.{Concurrent, Sync, Timer}
 import cats.{Id, ~>}
+import com.bot4s.telegram.api.RequestHandler
 import com.zaxxer.hikari.HikariDataSource
-import info.mukel.telegrambot4s.api.RequestHandler
 import me.seravkin.notifications.bot.ChatState.Nop
 import me.seravkin.notifications.bot.services.{NotificationChatServiceImpl, PageViewImpl, TimeBeautifyServiceImpl}
 import me.seravkin.notifications.bot.{ChatState, NotificationBot}
@@ -22,11 +25,11 @@ import me.seravkin.notifications.infrastructure.time.ActualSystemDateTime
 import me.seravkin.notifications.persistance.botio.{DoobieNotificationsRepository, DoobieUsersRepository}
 import me.seravkin.tg.adapter.Bot
 import me.seravkin.tg.adapter.requests.{RequestHandlerAdapter, RequestHandlerF}
-import monix.execution.Scheduler
 
 import scala.collection.concurrent.TrieMap
+import scala.concurrent.duration.FiniteDuration
 
-class Wiring[F[_]: Concurrent] {
+class Wiring[F[_]: Concurrent: Timer] {
 
   private[this] def datesAst[G[_]: Sync]: DatesAst[G] =
     new DatesAst[G](new SyncRandom[G]())
@@ -57,7 +60,6 @@ class Wiring[F[_]: Concurrent] {
 
   def create(config: NotificationConfiguration,
              source: HikariDataSource,
-             scheduler: Scheduler,
              interpreterK: BotF[F, ?] ~> F,
              toUnitK: F ~> Id,
              requestHandler: RequestHandler): F[Bot[F]] = {
@@ -71,14 +73,14 @@ class Wiring[F[_]: Concurrent] {
 
     val bot = botFor(new TrieChatStateRepository[ChatState, BotF[F, ?]](map, Nop), adapter)
 
-    Sync[F].delay {
-      scheduler.scheduleWithFixedDelay(config.secondsForScheduler.toLong, config.secondsForScheduler.toLong, TimeUnit.SECONDS, () => {
-        interpreterK.andThen(toUnitK).apply(service.sendNotificationsIfNeeded())
-      })
+    def schedule: F[Unit] =
+      Timer[F].sleep(FiniteDuration(config.secondsForScheduler.toLong,TimeUnit.SECONDS)) >>
+      interpreterK(service.sendNotificationsIfNeeded()).attempt >>
+      Sync[F].suspend(schedule)
 
+    Concurrent[F].start(schedule).map(_ =>
       Kleisli(bot)
         .mapK(interpreterK)
-    }
-
+    )
   }
 }

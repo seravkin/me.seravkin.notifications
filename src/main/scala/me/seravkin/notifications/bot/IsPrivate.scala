@@ -1,7 +1,7 @@
 package me.seravkin.notifications.bot
 
 import cats._
-import info.mukel.telegrambot4s.models.{ChatType, Message}
+import com.bot4s.telegram.models.{ChatType, Message}
 import me.seravkin.notifications.infrastructure.messages.Sender
 
 object IsPrivate {

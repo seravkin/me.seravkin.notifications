@@ -1,25 +1,30 @@
 package me.seravkin.notifications
 
+import java.util.concurrent.Executors
+
 import cats.effect.{ExitCode, IO, IOApp}
+import com.bot4s.telegram.api.Polling
+import com.bot4s.telegram.clients.ScalajHttpClient
 import com.zaxxer.hikari.HikariDataSource
-import info.mukel.telegrambot4s.api.Polling
 import me.seravkin.notifications.infrastructure.config.Configuration
 import me.seravkin.notifications.infrastructure.config.Configuration.NotificationConfiguration
 import me.seravkin.notifications.infrastructure.interpreters.{ReaderInterpreter, UnsafeIOInterpreter}
 import me.seravkin.tg.adapter.TelegramBotAdapter
-import monix.execution.Scheduler.Implicits.global
+
+import scala.concurrent.ExecutionContext
 
 object Main extends IOApp {
+
+  private[this] implicit val blockingEc: ExecutionContext = ExecutionContext.fromExecutorService(Executors.newCachedThreadPool())
 
   override def run(args: List[String]): IO[ExitCode] = for (
     config <- Configuration.load();
     source <- dataSource(config);
     adapter = new TelegramBotAdapter(
-      config.telegramApiKey,
+      new ScalajHttpClient(config.telegramApiKey),
       new Wiring[IO].create(config,
         source,
-        global,
-        new ReaderInterpreter(source.getConnection),
+        new ReaderInterpreter(blockingEc, source.getConnection),
         UnsafeIOInterpreter, _)
     ) with Polling;
     _ <- adapter.runSafe()

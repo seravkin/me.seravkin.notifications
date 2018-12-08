@@ -38,8 +38,10 @@ trait CommonParsers[T] extends RegexParsers { this: TimeConstants with HasIntern
   def validatedDateWithYear: Parser[(Int, Int, Int)] =
     FullDateRegex ^^ { case FullDateRegex(day, month, year) => (day.toInt, month.toInt, year.toInt) } filter(x => 1 <= x._1 && x._1 <= 31 && 1 <= x._2 && x._2 <= 12 )
 
+  private def isHours(x: Int): Boolean = 0 <= x && x <= 23
+
   def validatedTime: Parser[(Int, Int)] =
-    TimeRegex ^^ { case TimeRegex(hour, minutes) => hour.toInt -> minutes.toInt } filter(x => 0 <= x._1 && x._1 <= 23 && 0 <= x._2 && x._2 <= 59)
+    TimeRegex ^^ { case TimeRegex(hour, minutes) => hour.toInt -> minutes.toInt } filter(x => isHours(x._1) && 0 <= x._2 && x._2 <= 59)
 
   def validatedDate: Parser[(Int, Int)] =
     DateRegex ^^ { case DateRegex(day, month) => day.toInt -> month.toInt } filter(x => 1 <= x._1 && x._1 <= 31 && 1 <= x._2 && x._2 <= 12 )
@@ -47,8 +49,23 @@ trait CommonParsers[T] extends RegexParsers { this: TimeConstants with HasIntern
   def formattedDateWithYear: Parser[T] = validatedDateWithYear ^^ { case (day, month, year) =>
     momentInFutureAst.date(day, month, year) }
 
+  def validatedHour: Parser[T] =
+    int.filter(isHours) ^^ { hour => momentInFutureAst.time(hour, 0) }
+
   def formattedDate: Parser[T] = validatedDate ^^ { case (day, month) =>
     momentInFutureAst.date(day, month) }
+
+  def validatedDay: Parser[Int] =
+    int filter { x => 1 <= x && x <= 31 }
+
+  def dateWithMonth: Parser[T] =
+    validatedDay ~ months ^^ { case day ~ month =>
+      momentInFutureAst.date(day, month.toInt)
+    }
+
+  def dateWithMonthAndYear: Parser[T] =
+    validatedDay ~ months ~ int ^^ { case day ~ month ~ year =>
+    momentInFutureAst.date(day, month.toInt, year) }
 
   def formattedTime: Parser[T] = validatedTime ^^ { case (hour, minutes) =>
     momentInFutureAst.time(hour, minutes) }

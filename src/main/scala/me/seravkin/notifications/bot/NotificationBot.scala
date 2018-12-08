@@ -3,7 +3,7 @@ package me.seravkin.notifications.bot
 import cats._
 import cats.data.OptionT
 import cats.syntax.all._
-import info.mukel.telegrambot4s.models.{CallbackQuery, ChatType, Message}
+import com.bot4s.telegram.models.{CallbackQuery, ChatType, Message}
 import me.seravkin.notifications.bot.services.{NotificationChatService, PageView}
 import me.seravkin.notifications.domain._
 import me.seravkin.notifications.domain.interpreter.DatesFactory

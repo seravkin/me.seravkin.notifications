@@ -53,8 +53,8 @@ final class DoobieNotificationsRepository[F[_]: Monad] extends NotificationsRepo
   }
 
   private implicit val DateTimeMeta: Meta[LocalDateTime] =
-    Meta[java.sql.Timestamp].xmap(
-      ts => ts.toLocalDateTime,
+    Meta[java.sql.Timestamp].imap(
+      ts => ts.toLocalDateTime)(
       dt => java.sql.Timestamp.valueOf(dt)
     )
 

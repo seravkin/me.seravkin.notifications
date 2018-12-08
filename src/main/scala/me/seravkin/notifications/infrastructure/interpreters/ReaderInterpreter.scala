@@ -10,7 +10,10 @@ import doobie.free.KleisliInterpreter
 import doobie.free.connection.unit
 import doobie.util.transactor.{Strategy, Transactor}
 
-final class ReaderInterpreter(xa: => Connection) extends (ReaderT[IO, Transactor[IO], ?] ~> IO) {
+import scala.concurrent.ExecutionContext
+
+final class ReaderInterpreter(blockingEc: ExecutionContext, xa: => Connection)
+                             (implicit contextShift: ContextShift[IO]) extends (ReaderT[IO, Transactor[IO], ?] ~> IO) {
   override def apply[A](fa: ReaderT[IO, Transactor[IO], A]): IO[A] =
     IO(xa).bracketCase { connection =>
 
@@ -19,7 +22,7 @@ final class ReaderInterpreter(xa: => Connection) extends (ReaderT[IO, Transactor
       val transactor = Transactor[IO, Connection](
         connection,
         IO.pure[Connection],
-        KleisliInterpreter[IO].ConnectionInterpreter,
+        KleisliInterpreter[IO](blockingEc).ConnectionInterpreter,
         Strategy.default.copy(always = unit, after = unit, oops = unit))
 
       fa(transactor)

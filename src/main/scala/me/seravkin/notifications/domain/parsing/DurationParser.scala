@@ -19,7 +19,7 @@ final class DurationParser[T](i8ln: Internationalization, futureAst: MomentInFut
   private[this] def caseInsensitive[K](p: => Parser[K]): Parser[K] = (in: Input) =>
     parseAll(p, in.source.toString.drop(in.offset).toLowerCase)
 
-  def simpleDuration: Parser[T] = inTime | durations
+  def simpleDuration: Parser[T] = inTime(time) | durations | inTime(validatedHour)
 
   def durationWithConfirmation: Parser[T] = simpleDuration ~ anyOf(With) ~ anyOf(Confirmation) ~ (anyOf(Every) ~ duration).? ^^ {
     case dur ~ _ ~ _ ~ period =>

@@ -2,7 +2,7 @@ package me.seravkin.notifications.bot
 
 import cats._
 import cats.implicits._
-import info.mukel.telegrambot4s.models.Message
+import com.bot4s.telegram.models.Message
 import me.seravkin.notifications.bot.services.NotificationChatService
 import me.seravkin.notifications.infrastructure.messages.Message.{CommandWithArgs, IsLong}
 import me.seravkin.notifications.infrastructure.messages.Sender

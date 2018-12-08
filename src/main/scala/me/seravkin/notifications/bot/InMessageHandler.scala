@@ -2,7 +2,7 @@ package me.seravkin.notifications.bot
 
 import cats._
 import cats.implicits._
-import info.mukel.telegrambot4s.models.Message
+import com.bot4s.telegram.models.Message
 import me.seravkin.notifications.bot.ChatState._
 import me.seravkin.notifications.bot.services.NotificationChatService
 import me.seravkin.notifications.domain.PersistedUser
@@ -23,7 +23,7 @@ object InMessageHandler {
                          sender: Sender[F]): BotHandler[Message, F] = {
 
     def sendWarningIfNeeded(message: Message): F[Unit] = Monad[F].unit.flatMap(_ =>
-      if(23 <= systemDateTime.now.getHour && systemDateTime.now.getHour <= 2)
+      if(23 <= systemDateTime.now.getHour || systemDateTime.now.getHour <= 2)
         sender.tell(message.chat.id, "Время около нуля, обратите внимание при выборе даты")
       else
         Monad[F].unit

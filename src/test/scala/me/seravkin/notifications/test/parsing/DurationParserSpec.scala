@@ -5,7 +5,7 @@ import java.time.Duration
 import me.seravkin.notifications.domain.interpreter.NotificationProgramAst
 import me.seravkin.notifications.domain.parsing.NotificationProgram._
 import me.seravkin.notifications.domain.parsing.Period._
-import me.seravkin.notifications.domain.parsing._
+import me.seravkin.notifications.domain.parsing.{NotificationProgram, _}
 import org.scalatest.{FlatSpec, Matchers}
 
 class DurationParserSpec extends FlatSpec with Matchers {
@@ -38,6 +38,10 @@ class DurationParserSpec extends FlatSpec with Matchers {
     assertParsedTime(FromFormattedDate(InDays(0), FormattedTime(12, 45)))("сегодня в 12:45")
   }
 
+  it should "parse today date and time without minutes" in {
+    assertParsedTime(FromFormattedDate(InDays(0), FormattedTime(12, 0)))("сегодня в 12")
+  }
+
   it should "parse today date and time with confirmation" in {
     assertParsedTime(WithConfirmation(None, FromFormattedDate(InDays(0), FormattedTime(12, 45))))("сегодня в 12:45 с подтверждением")
   }
@@ -57,6 +61,16 @@ class DurationParserSpec extends FlatSpec with Matchers {
   it should "parse date and current time" in {
     assertParsedTime(FromFormattedDate(FormattedDate(22, 7), InCurrentTime))("22.07 в это же время")
   }
+
+  it should "parse date and time with text description of months" in {
+    assertParsedTime(FromFormattedDate(FormattedDate(22, 7), InCurrentTime))("22 июля в это же время")
+  }
+
+  it should "parse date and time with text description of months with year" in {
+    assertParsedTime(FromFormattedDate(NotificationProgram.FormattedDateWithYear(22, 7, 2018),
+      InCurrentTime))("22 июля 2018 в это же время")
+  }
+
 
   it should "parse in days and current time" in {
     assertParsedTime(FromFormattedDate(InDays(3), InCurrentTime))("через 3 дня в это же время")

@@ -1,7 +1,7 @@
 package me.seravkin.notifications
 
 import cats._
-import info.mukel.telegrambot4s.models.CallbackQuery
+import com.bot4s.telegram.models.CallbackQuery
 import me.seravkin.notifications.bot.ChatState.Nop
 import me.seravkin.notifications.domain.Notifications.Notification
 import me.seravkin.notifications.domain.internationalization.LegacyInternationalization
@@ -33,7 +33,8 @@ package object bot {
   }
 
   private val daysMap =
-    List(Monday, Tuesday, Wednesday, Thursday, Friday, Saturday, Sunday)
+    List(DayOfWeek.Monday, DayOfWeek.Tuesday, DayOfWeek.Wednesday,
+         DayOfWeek.Thursday, DayOfWeek.Friday, DayOfWeek.Saturday, DayOfWeek.Sunday)
     .map(d => (d.toInt, LegacyInternationalization.words(d).head))
     .toMap
 

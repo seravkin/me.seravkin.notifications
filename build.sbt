@@ -1,8 +1,8 @@
 name := "me.seravkin.notifications"
 
-version := "0.3.2"
+version := "0.4.0"
 
-scalaVersion := "2.12.4"
+scalaVersion := "2.12.7"
 
 assemblyJarName in assembly := "me-seravkin-notifications.jar"
 
@@ -55,36 +55,60 @@ resolvers ++= Seq(
   Resolver.bintrayRepo("seravkin","maven")
 )
 
+addCompilerPlugin("com.olegpy" %% "better-monadic-for" % "0.3.0-M4")
 addCompilerPlugin("org.spire-math" %% "kind-projector" % "0.9.4")
 addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.0" cross CrossVersion.full)
 
-val http4sVersion = "0.18.0"
+val dependencies = new {
+  val tgb4sV     = "4.0.0-RC2"
+  val catsV      = "1.4.0"
+  val catsEffV   = "1.1.0"
+  val tgAdapterV = "0.2.0"
+  val shapelessV = "2.3.3"
+  val doobieV    = "0.6.0"
+  val scalatestV = "3.0.4"
+  val parserComV = "1.0.4"
+  val hikariCpV  = "2.7.7"
+  val tsConfigV  = "1.3.2"
+
+  val tgBot4s = Seq(
+    "com.bot4s" %% "telegram-core"          % tgb4sV,
+    "default"   %% "me-seravkin-tg-adapter" % tgAdapterV
+  )
+
+  val cats = Seq(
+    "org.typelevel" %% "cats-core"   % catsV,
+    "org.typelevel" %% "cats-effect" % catsEffV
+  )
+
+  val parser = Seq(
+    "org.scala-lang.modules" %% "scala-parser-combinators" % parserComV
+  )
+
+  val doobie = Seq(
+    "org.tpolecat" %% "doobie-core"      % doobieV,
+    "org.tpolecat" %% "doobie-hikari"    % doobieV, // HikariCP transactor.
+    "org.tpolecat" %% "doobie-postgres"  % doobieV, // Postgres driver 42.2.1 + type mappings.
+    "org.tpolecat" %% "doobie-specs2"    % doobieV, // Specs2 support for typechecking statements.
+    "org.tpolecat" %% "doobie-scalatest" % doobieV, // ScalaTest support for typechecking statements.
+    "com.zaxxer"   %  "HikariCP"         % hikariCpV
+  )
+
+  val config = Seq(
+    "com.typesafe" % "config" % tsConfigV
+  )
+
+  val scalatest = Seq(
+    "org.scalactic" %% "scalactic" % scalatestV,
+    "org.scalatest" %% "scalatest" % scalatestV % "test"
+  )
+}
 
 libraryDependencies ++= Seq(
-  "info.mukel" %% "telegrambot4s" % "3.0.14",
-  "org.typelevel" %% "cats-core" % "1.1.0",
-  "org.typelevel" %% "cats-free" % "1.1.0",
-  "org.typelevel" %% "cats-effect" % "1.0.0-RC2",
-  "default" %% "me-seravkin-tg-adapter" % "0.1.1",
-  "com.chuusai" %% "shapeless" % "2.3.3",
-  "org.http4s" %% "http4s-dsl" % http4sVersion,
-  "org.http4s" %% "http4s-blaze-server" % http4sVersion,
-  "org.http4s" %% "http4s-blaze-client" % http4sVersion,
-  "io.monix" %% "monix" % "3.0.0-M3",
-  "org.scalactic" %% "scalactic" % "3.0.4",
-  "org.scalatest" %% "scalatest" % "3.0.4" % "test",
-  "org.tpolecat" %% "doobie-core"      % "0.5.0",
-  "org.scala-lang.modules" %% "scala-parser-combinators" % "1.0.4",
-  "org.tpolecat" %% "doobie-h2"        % "0.5.0", // H2 driver 1.4.196 + type mappings.
-  "org.tpolecat" %% "doobie-hikari"    % "0.5.0", // HikariCP transactor.
-  "org.tpolecat" %% "doobie-postgres"  % "0.5.0", // Postgres driver 42.2.1 + type mappings.
-  "org.tpolecat" %% "doobie-specs2"    % "0.5.0", // Specs2 support for typechecking statements.
-  "org.tpolecat" %% "doobie-scalatest" % "0.5.0",  // ScalaTest support for typechecking statements.
-  "com.h2database" % "h2" % "1.4.193",
-  "com.zaxxer" % "HikariCP" % "2.7.7",
-  // Optional for auto-derivation of JSON codecs
-  "io.circe" %% "circe-generic" % "0.9.1",
-  // Optional for string interpolation to JSON model
-  "io.circe" %% "circe-literal" % "0.9.1",
-  "com.typesafe" % "config" % "1.3.2"
-)
+  dependencies.tgBot4s,
+  dependencies.cats,
+  dependencies.parser,
+  dependencies.doobie,
+  dependencies.config,
+  dependencies.scalatest
+).flatten

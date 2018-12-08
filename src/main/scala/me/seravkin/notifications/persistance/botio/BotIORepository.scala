@@ -12,7 +12,7 @@ trait BotIORepository[F[_]] {
   }
 
   implicit class FragmentOps(fragment: Fragment) {
-    def read[Entity: Composite]: Stream.ToEffect[doobie.ConnectionIO, Entity] = fragment
+    def read[Entity: Read]: Stream.CompileOps[doobie.ConnectionIO, doobie.ConnectionIO, Entity] = fragment
       .query[Entity]
       .stream
       .compile

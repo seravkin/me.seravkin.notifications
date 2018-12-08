@@ -4,7 +4,7 @@ import java.time.LocalDateTime
 
 import cats._
 import cats.data._
-import info.mukel.telegrambot4s.models._
+import com.bot4s.telegram.models._
 import me.seravkin.notifications.bot.NotificationBot
 import me.seravkin.notifications.bot.commands.DeleteNotification
 import me.seravkin.notifications.bot.services.{NotificationChatServiceImpl, PageViewImpl, TimeBeautifyServiceImpl}
@@ -88,6 +88,31 @@ class NotificationBotSpec extends FlatSpec with Matchers {
       _  <- shouldAnswerWith(sentMessage)(hasExpected("Введите желаемое время:"));
       _  <- send("завтра в 12:35");
       _  <- shouldAnswerWith(sentMessage)(hasExpected("Напоминание поставлено и будет отправлено 23.08 в 12:35"))
+    ) yield ()
+
+    val (state, _) = dialogue.run(MockBotState(users = defaultUser :: Nil))
+
+    state.notifications.length should be (1)
+
+    val notification = state.notifications.head
+
+    notification.text should be ("test 1")
+  }
+
+  it should "send warning if now is near 00:00" in {
+
+    def send(command: String) =
+      this.send(command, date = MockDateTime(LocalDateTime.of(2018, 8, 22, 23, 30)))
+
+    val dialogue = for(
+      _  <- send("/in");
+      _  <- shouldAnswerWith(sentMessage)(hasExpected("Введите напоминание:"));
+      _  <- send("test 1");
+      _  <- shouldAnswerWith(_.reverse.tail.head)(hasExpected("Время около нуля, обратите внимание при выборе даты"));
+      _  <- shouldAnswerWith(sentMessage)(hasExpected("Введите желаемое время:"));
+      _  <- send("завтра в 12:35");
+      _  <- shouldAnswerWith(sentMessage)(hasExpected("Напоминание поставлено и будет отправлено 23.08 в 12:35"))
+
     ) yield ()
 
     val (state, _) = dialogue.run(MockBotState(users = defaultUser :: Nil))
@@ -343,8 +368,8 @@ class NotificationBotSpec extends FlatSpec with Matchers {
       chatInstance = "",
       data = Some(command))))
 
-  private[this] def send(text: String, user: User = defaultTgUser) =
-    bot(ReceiveMessage(Message(-1, Some(user), 0, Chat(1, ChatType.Private), text = Some(text))))
+  private[this] def send(text: String, user: User = defaultTgUser, date: MockDateTime = mockedDateTime) =
+    createBot(date)(ReceiveMessage(Message(-1, Some(user), 0, Chat(1, ChatType.Private), text = Some(text))))
 
   private[this] def editOfMessage(id: Int)(list: List[MockMessage]): MockMessage = {
     list.exists(_.id == id) should be (true)

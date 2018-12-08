@@ -23,6 +23,7 @@ trait DateParsers[T] extends RegexParsers { this: CommonParsers[T] with TimeCons
   def dayOfWeekInWeeks: Parser[T] = anyOf(In) ~ daysOfWeek ~ (inWeek | inWeeks).? ^^ { case _ ~ dayOf ~ weeks =>
     momentInFutureAst.dayOfWeek(weeks.getOrElse(0), dayOf) }
 
-  def date: Parser[T] = formattedDateWithYear | formattedDate | today | tomorrow | dayAfterTomorrow | inDays | inWeeksAsDays | dayOfWeekInWeeks
+  def date: Parser[T] = formattedDateWithYear | formattedDate | dateWithMonthAndYear | dateWithMonth |
+    today | tomorrow | dayAfterTomorrow | inDays | inWeeksAsDays | dayOfWeekInWeeks
 
 }

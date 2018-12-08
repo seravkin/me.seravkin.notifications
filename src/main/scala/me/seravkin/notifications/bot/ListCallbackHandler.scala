@@ -3,7 +3,7 @@ package me.seravkin.notifications.bot
 import cats._
 import cats.data._
 import cats.implicits._
-import info.mukel.telegrambot4s.models.CallbackQuery
+import com.bot4s.telegram.models.CallbackQuery
 import me.seravkin.notifications.bot.ChatState.InControlWaitingForTextEdit
 import me.seravkin.notifications.bot.commands._
 import me.seravkin.notifications.bot.services.{NotificationChatService, PageView}
