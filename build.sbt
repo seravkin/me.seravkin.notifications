@@ -70,6 +70,7 @@ val dependencies = new {
   val parserComV = "1.0.4"
   val hikariCpV  = "2.7.7"
   val tsConfigV  = "1.3.2"
+  val attoV      = "0.6.4"
 
   val tgBot4s = Seq(
     "com.bot4s" %% "telegram-core"          % tgb4sV,
@@ -82,15 +83,14 @@ val dependencies = new {
   )
 
   val parser = Seq(
-    "org.scala-lang.modules" %% "scala-parser-combinators" % parserComV
+    "org.tpolecat" %% "atto-core" % attoV
   )
 
   val doobie = Seq(
     "org.tpolecat" %% "doobie-core"      % doobieV,
-    "org.tpolecat" %% "doobie-hikari"    % doobieV, // HikariCP transactor.
-    "org.tpolecat" %% "doobie-postgres"  % doobieV, // Postgres driver 42.2.1 + type mappings.
-    "org.tpolecat" %% "doobie-specs2"    % doobieV, // Specs2 support for typechecking statements.
-    "org.tpolecat" %% "doobie-scalatest" % doobieV, // ScalaTest support for typechecking statements.
+    "org.tpolecat" %% "doobie-hikari"    % doobieV,
+    "org.tpolecat" %% "doobie-postgres"  % doobieV,
+    "org.tpolecat" %% "doobie-scalatest" % doobieV % "test",
     "com.zaxxer"   %  "HikariCP"         % hikariCpV
   )
 

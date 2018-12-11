@@ -1,20 +1,28 @@
 package me.seravkin.notifications.infrastructure.messages
 
 import scala.util.Try
-import scala.util.parsing.combinator.RegexParsers
+import atto._
+import atto.syntax.all._
+import me.seravkin.notifications.domain.parsing.syntax.all._
 
 object Message {
 
-  private object ArgumentParser extends RegexParsers {
+  private object ArgumentParser {
 
-    private[this] val stringInQuotes: Parser[String] = "\"(.+)\"".r map { _.replace("\"", "") }
-    private[this] val anyString: Parser[String] = """([^\s]+)""".r
+    private[this] val stringInQuotes: Parser[String] =
+      Atto.char('\"') ~> Atto.stringOf1(Atto.anyChar) <~ Atto.char('\"')
 
-    private[this] val arguments: Parser[List[String]] = rep(stringInQuotes | anyString)
+    private[this] val anyString: Parser[String] =
+      Atto.stringOf1(Atto.noneOf(" \""))
 
-    def parse(string: String): Option[List[String]] =
-      parseAll(arguments, string).map(Some(_)).getOrElse(None)
+    private[this] val arguments: Parser[List[String]] = (stringInQuotes | anyString).manyWs1 -| { _.toList }
 
+    def parse(string: String): Option[List[String]] = {
+      val result =
+        arguments.parseOnly(string)
+
+      result.option
+    }
   }
 
   object CommandWithArgs {

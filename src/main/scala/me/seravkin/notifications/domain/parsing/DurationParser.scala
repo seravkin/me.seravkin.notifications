@@ -1,44 +1,50 @@
 package me.seravkin.notifications.domain.parsing
 
-import me.seravkin.notifications.domain.internationalization.Internationalization
+import atto.Parser.{Failure, State, Success, TResult}
+import atto._
+import atto.syntax.all._
 import me.seravkin.notifications.domain.internationalization.Words._
+import me.seravkin.notifications.domain.parsing.syntax.all._
 
-import scala.util.parsing.combinator.RegexParsers
+final class DurationParser[T](internalizationParsers: InternalizationParsers,
+                              commonParsers: CommonParsers[T],
+                              timeParsers: TimeParsers[T],
+                              recurrentParsers: RecurrentParsers[T, T],
+                              momentInFutureAst: MomentInFutureAst[T],
+                              recAst: RecurrentAst[T]) {
 
-final class DurationParser[T](i8ln: Internationalization, futureAst: MomentInFutureAst[T], recAst: RecurrentAst[T])
-  extends RegexParsers with TimeConstants with CommonParsers[T]
-  with DateParsers[T] with TimeParsers[T]
-  with HasInternationalization with HasMomentInFutureAst[T] with HasRecurrentAst[T] with RecurrentParsers[T, T] {
+  import internalizationParsers._
+  import commonParsers._
+  import timeParsers._
+  import recurrentParsers._
 
-  override def internationalization: Internationalization = i8ln
-  override def momentInFutureAst: MomentInFutureAst[T] = futureAst
-  override def recurrentAst: RecurrentAst[T] = recAst
+  private[this] val usernameParser = Atto.char('@') ~> Atto.stringOf1(Atto.notChar(' '))
 
-  private[this] val usernameParser = """[^\s]+""".r
-
-  private[this] def caseInsensitive[K](p: => Parser[K]): Parser[K] = (in: Input) =>
-    parseAll(p, in.source.toString.drop(in.offset).toLowerCase)
+  private[this] def caseInsensitive[K](p: => Parser[K]): Parser[K] =
+    new Parser[K] {
+      override def toString = "caseInsensitive"
+      def apply[R](st0: State, kf: Failure[R], ks: Success[K,R]): TResult[R] =
+        p(st0.copy(input = st0.input.toLowerCase), kf, ks)
+    }
 
   def simpleDuration: Parser[T] = inTime(time) | durations | inTime(validatedHour)
 
-  def durationWithConfirmation: Parser[T] = simpleDuration ~ anyOf(With) ~ anyOf(Confirmation) ~ (anyOf(Every) ~ duration).? ^^ {
-    case dur ~ _ ~ _ ~ period =>
+  def durationWithConfirmation: Parser[T] = simpleDuration ~~ anyOf(With) ~~ anyOf(Confirmation) ~
+    Atto.optWs(Atto.whitespace ~ anyOf(Every) ~~ duration) -| {
+    case (((dur,_),_), period) =>
       momentInFutureAst.confirmation(period.map(_._2), dur)
   }
 
-  def syntax: Parser[T] = (recurrent | durationWithConfirmation | simpleDuration) ^^ (time => time)
+  def syntax: Parser[T] = recurrent | durationWithConfirmation | simpleDuration
 
-  def username: Parser[String] = anyOf(ForUserString) ~ "@"  ~ usernameParser ^^ { case  _ ~ _ ~ name => name }
+  def username: Parser[String] = anyOf(ForUserString) ~~ usernameParser -| {
+    case (_, name) => name
+  }
 
-  def withUsername: Parser[T] = (username ~ caseInsensitive(syntax)) ^^ { case name ~ s =>
+  def withUsername: Parser[T] = (username ~~ caseInsensitive(syntax)) -| { case (name, s) =>
     momentInFutureAst.forUser(name, s) }
 
-  def parse(string: String): Either[String, T] = parse(withUsername | caseInsensitive(syntax), string) match {
-      case Success(t, _) => Right(t)
-      case Failure(msg, inp) => Left(s"$msg - ${inp.pos}")
-      case Error(msg, inp) => Left(s"$msg - ${inp.pos}")
-      case NoSuccess(msg, inp) => Left(s"$msg - ${inp.pos}")
-    }
-
-
+  def parse(string: String): Either[String, T] = (withUsername | caseInsensitive(syntax))
+    .parseOnly(string)
+    .either
 }

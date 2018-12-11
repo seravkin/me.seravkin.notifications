@@ -2,21 +2,21 @@ package me.seravkin.notifications.domain.parsing
 
 import java.time.Duration
 
+import atto._
+import atto.syntax.all._
 import me.seravkin.notifications.domain.internationalization.Words._
 import me.seravkin.notifications.domain.parsing.Period._
 
-import scala.util.parsing.combinator.RegexParsers
-
-trait TimeConstants { this: RegexParsers with HasInternationalization =>
+final class TimeConstants(intr: InternalizationParsers) {
 
   private[this] def word(word: Word, f: Long => Duration): Parser[Int => Duration] =
-    anyOf(word) ^^ { _ => i: Int => f(i) }
+    intr.anyOf(word).map { _ => i: Int => f(i) }
 
   private[this] def dayOfWeek[T <: Word with DayOfWeek](t: T): Parser[Int] =
-    anyOf(t) ^^ { _ => t.toInt }
+    intr.anyOf(t).map { _ => t.toInt }
 
   private[this] def month[T <: Word with Month](t: T): Parser[Month] =
-    anyOf(t) ^^ { _ => t }
+    intr.anyOf(t) >| t
 
   def second: Parser[Int => Duration] = word(Second, Duration.ofSeconds)
   def minute: Parser[Int => Duration] = word(Minute, Duration.ofMinutes)
@@ -48,10 +48,10 @@ trait TimeConstants { this: RegexParsers with HasInternationalization =>
 
   def daysOfWeek: Parser[Int] = monday | tuesday | wednesday | thursday | friday | saturday | sunday
 
-  def night: Parser[Period] = anyOf(AtNight) ^^ { _ => Night }
-  def morning: Parser[Period] = anyOf(AtMorning) ^^ { _ => Morning }
-  def dayAsTime: Parser[Period] = anyOf(AtDay) ^^ { _ => DayAsTime }
-  def evening: Parser[Period] = anyOf(AtEvening) ^^ { _ => Evening }
+  def night: Parser[Period] = intr.anyOf(AtNight) >| Night
+  def morning: Parser[Period] = intr.anyOf(AtMorning) >| Morning
+  def dayAsTime: Parser[Period] = intr.anyOf(AtDay) >| DayAsTime
+  def evening: Parser[Period] = intr.anyOf(AtEvening) >| Evening
 
   def periods: Parser[Period] = night | morning | dayAsTime | evening
 
