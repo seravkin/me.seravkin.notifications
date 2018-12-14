@@ -10,10 +10,10 @@ object Message {
   private object ArgumentParser {
 
     private[this] val stringInQuotes: Parser[String] =
-      Atto.char('\"') ~> Atto.stringOf1(Atto.anyChar) <~ Atto.char('\"')
+      Atto.char('\"') ~> Atto.stringOf1(Atto.noneOf("\"")) <~ Atto.char('\"')
 
     private[this] val anyString: Parser[String] =
-      Atto.stringOf1(Atto.noneOf(" \""))
+      Atto.stringOf1(Atto.noneOf(" "))
 
     private[this] val arguments: Parser[List[String]] = (stringInQuotes | anyString).manyWs1 -| { _.toList }
 
