@@ -1,8 +1,8 @@
 package me.seravkin.notifications.infrastructure.random
 
-import cats.effect.Sync
+import cats.{Applicative, Defer}
 
-final class SyncRandom[F[_]: Sync] extends Random[F] {
+final class SyncRandom[F[_]: Defer: Applicative] extends Random[F] {
   override def nextInt(int: Int): F[Int] =
-    Sync[F].delay(new util.Random().nextInt(int))
+    Defer[F].defer(Applicative[F].pure(new util.Random().nextInt(int)))
 }

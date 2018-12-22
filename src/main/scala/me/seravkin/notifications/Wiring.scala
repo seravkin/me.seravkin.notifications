@@ -1,19 +1,22 @@
 package me.seravkin.notifications
 
+import java.time.LocalDateTime
 import java.util.concurrent.TimeUnit
 
-import cats.data.Kleisli
+import cats.data.{EitherT, Kleisli, ReaderT}
 import cats.syntax.flatMap._
 import cats.syntax.functor._
 import cats.syntax.applicativeError._
+import cats.mtl.implicits._
 import cats.effect.{Concurrent, Sync, Timer}
-import cats.{Id, ~>}
+import cats.{Defer, Id, MonadError, ~>}
 import com.bot4s.telegram.api.RequestHandler
 import com.zaxxer.hikari.HikariDataSource
+import doobie.util.transactor.Transactor
 import me.seravkin.notifications.bot.ChatState.Nop
 import me.seravkin.notifications.bot.services.{NotificationChatServiceImpl, PageViewImpl, TimeBeautifyServiceImpl}
 import me.seravkin.notifications.bot.{ChatState, NotificationBot}
-import me.seravkin.notifications.domain.interpreter.DatesAst
+import me.seravkin.notifications.domain.interpreter._
 import me.seravkin.notifications.domain.parsing.CombinatorMomentInFutureParser
 import me.seravkin.notifications.domain.services.NotificationTasksServiceImpl
 import me.seravkin.notifications.infrastructure.BotF
@@ -29,34 +32,55 @@ import me.seravkin.tg.adapter.requests.{RequestHandlerAdapter, RequestHandlerF}
 import scala.collection.concurrent.TrieMap
 import scala.concurrent.duration.FiniteDuration
 
-class Wiring[F[_]: Concurrent: Timer] {
+final class Wiring[F[_]: Concurrent: Timer] {
 
-  private[this] def datesAst[G[_]: Sync]: DatesAst[G] =
-    new DatesAst[G](new SyncRandom[G]())
 
-  private[this] def parser[G[_]: Sync] =
-    new CombinatorMomentInFutureParser(datesAst[G], datesAst[G])
+  private[this] def parser[G[_]: DateProvider: MonadError[?[_], String]: Defer] =
+    new CombinatorMomentInFutureParser(
+      new DurationApplicativeAst[G](),
+      new TimeApplicativeAst[G](new SyncRandom[G]),
+      new DateApplicativeAst[G](),
+      new DateAndTimeApplicativeAst[G](),
+      new RelativeApplicativeAst[G](),
+      new UserApplicativeAst[G](),
+      new ConfirmationApplicativeAst[G](),
+      new RecurrentApplicativeAst[G]()
+    )
+
+  private[this] implicit def deferForFactory[G[_]: Sync]: Defer[DatesFactory[BotF[G, ?], ?]] =
+    new Defer[DatesFactory[BotF[G, ?], ?]] {
+      override def defer[A](fa: => DatesFactory[BotF[G, ?], A]): DatesFactory[BotF[G, ?], A] =
+        ReaderT[EitherT[BotF[G, ?], String,?], LocalDateTime, A](n =>
+          EitherT(
+            ReaderT[G, Transactor[G], Either[String, A]](tx =>
+              Sync[G].suspend(fa(n).value(tx))
+            )
+          )
+        )
+    }
+
 
   private[this] def botFor(chatStateRepository: ChatStateRepository[ChatState, BotF[F, ?]],
-                                       req: RequestHandlerF[BotF[F, ?]]): NotificationBot[BotF[F, ?]] = NotificationBot[BotF[F, ?]](
-    new DoobieUsersRepository[F],
-    chatStateRepository,
-    new RequestHandlerSender[BotF[F, ?]](req),
-    parser[BotF[F, ?]],
-    new DoobieNotificationsRepository,
-    new NotificationChatServiceImpl(
-      new DoobieNotificationsRepository[F],
+                           req: RequestHandlerF[BotF[F, ?]]): NotificationBot[BotF[F, ?]] =
+    NotificationBot[BotF[F, ?]](
       new DoobieUsersRepository[F],
       chatStateRepository,
-      parser[BotF[F, ?]],
-      ActualSystemDateTime,
-      new TimeBeautifyServiceImpl(ActualSystemDateTime),
-      new RequestHandlerSender[BotF[F, ?]](req)),
-    new PageViewImpl(
-      new DoobieNotificationsRepository[F],
-      new RequestHandlerSender[BotF[F, ?]](req)
-    ),
-    ActualSystemDateTime)
+      new RequestHandlerSender[BotF[F, ?]](req),
+      parser[DatesFactory[BotF[F, ?], ?]],
+      new DoobieNotificationsRepository,
+      new NotificationChatServiceImpl(
+        new DoobieNotificationsRepository[F],
+        new DoobieUsersRepository[F],
+        chatStateRepository,
+        parser[DatesFactory[BotF[F, ?], ?]],
+        ActualSystemDateTime,
+        new TimeBeautifyServiceImpl(ActualSystemDateTime),
+        new RequestHandlerSender[BotF[F, ?]](req)),
+      new PageViewImpl(
+        new DoobieNotificationsRepository[F],
+        new RequestHandlerSender[BotF[F, ?]](req)
+      ),
+      ActualSystemDateTime)
 
   def create(config: NotificationConfiguration,
              source: HikariDataSource,

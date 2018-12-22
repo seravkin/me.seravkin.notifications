@@ -4,12 +4,15 @@ import java.time.Duration
 
 import atto._
 import atto.syntax.all._
+import me.seravkin.notifications.domain.ast.{DateAst, DurationAst, TimeAst}
 import me.seravkin.notifications.domain.parsing.syntax.all._
 import me.seravkin.notifications.domain.internationalization.Words._
 
 final class CommonParsers[T](internalizationParsers: InternalizationParsers,
                              timeConstants: TimeConstants,
-                             momentInFutureAst: MomentInFutureAst[T]) {
+                             durationAst: DurationAst[T],
+                             dateAst: DateAst[T],
+                             timeAst: TimeAst[T]) {
 
   import internalizationParsers._
   import timeConstants._
@@ -37,7 +40,7 @@ final class CommonParsers[T](internalizationParsers: InternalizationParsers,
 
   def duration: Parser[Duration] = int ~~ timeUnit -| { case (i, toDuration) => toDuration(i) }
 
-  def durations: Parser[T] = duration.manyWs1 -| { seq => momentInFutureAst.duration(seq.toList.reduce(_ plus _)) }
+  def durations: Parser[T] = duration.manyWs1 -| { seq => durationAst.duration(seq.toList.reduce(_ plus _)) }
 
   def validatedDateWithYear: Parser[(Int, Int, Int)] =
     fullDateRegex filter(x => 1 <= x._1 && x._1 <= 31 && 1 <= x._2 && x._2 <= 12 )
@@ -51,27 +54,27 @@ final class CommonParsers[T](internalizationParsers: InternalizationParsers,
     dateRegex filter(x => 1 <= x._1 && x._1 <= 31 && 1 <= x._2 && x._2 <= 12 )
 
   def formattedDateWithYear: Parser[T] = validatedDateWithYear -| { case (day, month, year) =>
-    momentInFutureAst.date(day, month, year) }
+    dateAst.date(day, month, year) }
 
   def validatedHour: Parser[T] =
-    int.filter(isHours) -| { hour => momentInFutureAst.time(hour, 0) }
+    int.filter(isHours) -| { hour => timeAst.time(hour, 0) }
 
   def formattedDate: Parser[T] = validatedDate -| { case (day, month) =>
-    momentInFutureAst.date(day, month) }
+    dateAst.date(day, month) }
 
   def validatedDay: Parser[Int] =
     int filter { x => 1 <= x && x <= 31 }
 
   def dateWithMonth: Parser[T] =
     validatedDay ~~ months -| { case (day, month) =>
-      momentInFutureAst.date(day, month.toInt)
+      dateAst.date(day, month.toInt)
     }
 
   def dateWithMonthAndYear: Parser[T] =
     validatedDay ~~ months ~~ int -| { case ((day, month), year) =>
-    momentInFutureAst.date(day, month.toInt, year) }
+    dateAst.date(day, month.toInt, year) }
 
   def formattedTime: Parser[T] = validatedTime -| { case (hour, minutes) =>
-    momentInFutureAst.time(hour, minutes) }
+    timeAst.time(hour, minutes) }
 
 }

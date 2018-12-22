@@ -4,8 +4,13 @@ import java.time.Duration
 
 import me.seravkin.notifications.domain.parsing.NotificationProgram._
 import me.seravkin.notifications.domain.parsing._
+import me.seravkin.notifications.domain.ast._
 
-object NotificationProgramAst extends MomentInFutureAst[NotificationProgram] with RecurrentAst[NotificationProgram] {
+object NotificationProgramAst extends DateAst[NotificationProgram]
+  with RecurrentAst[NotificationProgram] with DurationAst[NotificationProgram]
+  with RelativeAst[NotificationProgram] with TimeAst[NotificationProgram]
+  with UserAst[NotificationProgram] with ConfirmationAst[NotificationProgram]
+  with DateAndTimeAst[NotificationProgram, NotificationProgram, NotificationProgram] {
 
   override def dayOfWeek(weekOffset: Int, dayOfWeek: Int): NotificationProgram =
     InNextDayOfWeek(weekOffset, dayOfWeek)

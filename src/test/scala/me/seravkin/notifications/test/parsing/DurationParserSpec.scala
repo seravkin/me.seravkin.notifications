@@ -129,7 +129,14 @@ class DurationParserSpec extends FlatSpec with Matchers {
   }
 
   private def assertParsedTime(momentInFuture: NotificationProgram)(text: String) = {
-    val parser = new CombinatorMomentInFutureParser[NotificationProgram](NotificationProgramAst, NotificationProgramAst)
+    val parser = new CombinatorMomentInFutureParser[NotificationProgram](NotificationProgramAst,
+       NotificationProgramAst,
+        NotificationProgramAst,
+        NotificationProgramAst,
+        NotificationProgramAst,
+        NotificationProgramAst,
+        NotificationProgramAst,
+      NotificationProgramAst)
     val result = parser.parseMomentInFuture(text)
 
     result should be (Right(momentInFuture))

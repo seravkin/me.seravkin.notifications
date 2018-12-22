@@ -1,4 +1,4 @@
-package me.seravkin.notifications.domain.parsing
+package me.seravkin.notifications.domain.ast
 
 trait RecurrentAst[T] {
   def everyDayOfWeek(days: Set[Int], t: T): T

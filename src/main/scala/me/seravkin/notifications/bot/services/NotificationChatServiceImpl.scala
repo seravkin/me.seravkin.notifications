@@ -17,7 +17,7 @@ import me.seravkin.notifications.persistance.{NotificationsRepository, UsersRepo
 final class NotificationChatServiceImpl[F[_]: Monad](notificationsRepository: NotificationsRepository[F],
                                                      usersRepository: UsersRepository[F],
                                                      chatStateRepository: ChatStateRepository[ChatState, F],
-                                                     momentInFutureParser: MomentInFutureParser[DatesFactory[F]],
+                                                     momentInFutureParser: MomentInFutureParser[DatesFactory[F, Dates]],
                                                      systemDateTime: SystemDateTime,
                                                      timeBeautifyService: TimeBeautifyService,
                                                      sender: Sender[F]) extends NotificationChatService[F] {
@@ -42,7 +42,7 @@ final class NotificationChatServiceImpl[F[_]: Monad](notificationsRepository: No
 
   private[this] def tryParseAndInterpret(text: String): EitherT[F, String, Dates] = {
     for (factory <- EitherT.fromEither[F](momentInFutureParser.parseMomentInFuture(text));
-         result  <- EitherT(factory(systemDateTime.now)))
+         result  <- factory(systemDateTime.now))
       yield result
   }
 

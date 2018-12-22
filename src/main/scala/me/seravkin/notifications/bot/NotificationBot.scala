@@ -6,7 +6,7 @@ import cats.syntax.all._
 import com.bot4s.telegram.models.{CallbackQuery, ChatType, Message}
 import me.seravkin.notifications.bot.services.{NotificationChatService, PageView}
 import me.seravkin.notifications.domain._
-import me.seravkin.notifications.domain.interpreter.DatesFactory
+import me.seravkin.notifications.domain.interpreter.{Dates, DatesFactory}
 import me.seravkin.notifications.domain.parsing.MomentInFutureParser
 import me.seravkin.notifications.infrastructure.messages.Sender
 import me.seravkin.notifications.infrastructure.state.ChatStateRepository
@@ -17,7 +17,7 @@ import me.seravkin.tg.adapter.events._
 final case class NotificationBot[F[_] : Monad](usersRepository: UsersRepository[F],
                                                chatStateRepository: ChatStateRepository[ChatState, F],
                                                sender: Sender[F],
-                                               momentInFutureParser: MomentInFutureParser[DatesFactory[F]],
+                                               momentInFutureParser: MomentInFutureParser[DatesFactory[F, Dates]],
                                                notificationsRepository: NotificationsRepository[F],
                                                notificationChatService: NotificationChatService[F],
                                                pageView: PageView[F],

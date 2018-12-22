@@ -4,13 +4,15 @@ import atto.Parser.{Failure, State, Success, TResult}
 import atto._
 import atto.syntax.all._
 import me.seravkin.notifications.domain.internationalization.Words._
+import me.seravkin.notifications.domain.ast.{ConfirmationAst, RecurrentAst, UserAst}
 import me.seravkin.notifications.domain.parsing.syntax.all._
 
 final class DurationParser[T](internalizationParsers: InternalizationParsers,
                               commonParsers: CommonParsers[T],
                               timeParsers: TimeParsers[T],
                               recurrentParsers: RecurrentParsers[T, T],
-                              momentInFutureAst: MomentInFutureAst[T],
+                              confirmationAst: ConfirmationAst[T],
+                              userAst: UserAst[T],
                               recAst: RecurrentAst[T]) {
 
   import internalizationParsers._
@@ -32,7 +34,7 @@ final class DurationParser[T](internalizationParsers: InternalizationParsers,
   def durationWithConfirmation: Parser[T] = simpleDuration ~~ anyOf(With) ~~ anyOf(Confirmation) ~
     Atto.optWs(Atto.whitespace ~ anyOf(Every) ~~ duration) -| {
     case (((dur,_),_), period) =>
-      momentInFutureAst.confirmation(period.map(_._2), dur)
+      confirmationAst.confirmation(period.map(_._2), dur)
   }
 
   def syntax: Parser[T] = recurrent | durationWithConfirmation | simpleDuration
@@ -42,7 +44,7 @@ final class DurationParser[T](internalizationParsers: InternalizationParsers,
   }
 
   def withUsername: Parser[T] = (username ~~ caseInsensitive(syntax)) -| { case (name, s) =>
-    momentInFutureAst.forUser(name, s) }
+    userAst.forUser(name, s) }
 
   def parse(string: String): Either[String, T] = (withUsername | caseInsensitive(syntax))
     .parseOnly(string)

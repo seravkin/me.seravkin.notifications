@@ -23,7 +23,7 @@ class NotificationTasksServiceSpec extends FlatSpec with Matchers {
 
     val service = notificationTaskService(date)
 
-    val (state, _) = service.sendNotificationsIfNeeded().run(initialState)
+    val (state, _) = service.sendNotificationsIfNeeded().run(initialState).value
 
     val messages = state.sentMessages.map(_.text)
     messages should be (List("test1", "test2"))
@@ -40,7 +40,7 @@ class NotificationTasksServiceSpec extends FlatSpec with Matchers {
 
     val service = notificationTaskService(date)
 
-    val (state, _) = service.sendNotificationsIfNeeded().run(initialState)
+    val (state, _) = service.sendNotificationsIfNeeded().run(initialState).value
 
     val buttons = state.sentMessages.map(_.buttons.map(_.name)).head
     buttons should be (List("Перенести"))
@@ -58,7 +58,7 @@ class NotificationTasksServiceSpec extends FlatSpec with Matchers {
 
     val service = notificationTaskService(date)
 
-    val (state, _) = service.sendNotificationsIfNeeded().run(initialState)
+    val (state, _) = service.sendNotificationsIfNeeded().run(initialState).value
 
     val messages = state.sentMessages.map(_.text)
     messages should be (List("test1", "test2"))
@@ -75,7 +75,7 @@ class NotificationTasksServiceSpec extends FlatSpec with Matchers {
 
     val service = notificationTaskService(date)
 
-    val (state, _) = service.sendNotificationsIfNeeded().run(initialState)
+    val (state, _) = service.sendNotificationsIfNeeded().run(initialState).value
 
     val compiled = state.compiledDatesIdToDate
 
@@ -94,7 +94,7 @@ class NotificationTasksServiceSpec extends FlatSpec with Matchers {
 
     val service = notificationTaskService(date)
 
-    val (state, _) = service.sendNotificationsIfNeeded().run(initialState)
+    val (state, _) = service.sendNotificationsIfNeeded().run(initialState).value
 
     val buttons = state.sentMessages.map(_.buttons.map(_.name)).head
     buttons should be (List("Перенести", "Отменить"))
@@ -109,7 +109,7 @@ class NotificationTasksServiceSpec extends FlatSpec with Matchers {
 
     val service = notificationTaskService(date)
 
-    val (state, _) = service.sendNotificationsIfNeeded().run(initialState)
+    val (state, _) = service.sendNotificationsIfNeeded().run(initialState).value
 
     val messages = state.sentMessages.map(_.text)
 
@@ -132,7 +132,7 @@ class NotificationTasksServiceSpec extends FlatSpec with Matchers {
     ))
 
     val service = notificationTaskService(date)
-    val (state, _) = service.sendNotificationsIfNeeded().run(initialState)
+    val (state, _) = service.sendNotificationsIfNeeded().run(initialState).value
 
 
     val compiled = state.compiledDatesIdToDate
@@ -148,7 +148,7 @@ class NotificationTasksServiceSpec extends FlatSpec with Matchers {
 
     val service = notificationTaskService(date)
 
-    val (state, _) = service.sendNotificationsIfNeeded().run(initialState)
+    val (state, _) = service.sendNotificationsIfNeeded().run(initialState).value
 
 
     val buttons = state.sentMessages.map(_.buttons.map(_.name)).head
@@ -159,8 +159,8 @@ class NotificationTasksServiceSpec extends FlatSpec with Matchers {
   private[this] def notificationTaskService(now: LocalDateTime): NotificationTasksService[MockBotF] =
     new NotificationTasksServiceImpl[MockBotF](
       MockDateTime(now),
-      new MockNotificationRepository[Id],
-      new MockSender[Id]
+      new MockNotificationRepository[Eval],
+      new MockSender[Eval]
     )
 
 }

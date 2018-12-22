@@ -1,6 +1,6 @@
 name := "me.seravkin.notifications"
 
-version := "0.4.1"
+version := "0.4.2"
 
 scalaVersion := "2.12.7"
 
@@ -71,6 +71,7 @@ val dependencies = new {
   val hikariCpV  = "2.7.7"
   val tsConfigV  = "1.3.2"
   val attoV      = "0.6.4"
+  val catsMtlV   = "0.4.0"
 
   val tgBot4s = Seq(
     "com.bot4s" %% "telegram-core"          % tgb4sV,
@@ -79,7 +80,8 @@ val dependencies = new {
 
   val cats = Seq(
     "org.typelevel" %% "cats-core"   % catsV,
-    "org.typelevel" %% "cats-effect" % catsEffV
+    "org.typelevel" %% "cats-effect" % catsEffV,
+    "org.typelevel" %% "cats-mtl-core" % catsMtlV
   )
 
   val parser = Seq(
