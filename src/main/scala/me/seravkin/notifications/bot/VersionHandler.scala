@@ -7,6 +7,6 @@ import me.seravkin.tg.adapter.matching.ContainsText
 object VersionHandler {
   def apply[F[_]](sender: Sender[F]): BotHandler[Message, F] = {
     case HasMessage(message@ContainsText("/version")) =>
-      sender.tell(message.chat.id, "0.4.2")
+      sender.tell(message.chat.id, "0.4.3")
   }
 }
