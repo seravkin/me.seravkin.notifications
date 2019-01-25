@@ -11,7 +11,6 @@ final class RecurrentParsers[T, R](internalizationParsers: InternalizationParser
                                    recurrentAst: RecurrentAst[R]) {
   import internalizationParsers._
   import commonParsers._
-  
   def everyday: Parser[R] = anyOf(EveryDayIn) ~~ validatedTime -|
     { case (_,pair) => recurrentAst.inTime(pair._1, pair._2) }
 

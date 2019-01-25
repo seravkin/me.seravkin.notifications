@@ -10,7 +10,6 @@ final class RelativeParsers[T](internalizationParsers: InternalizationParsers,
                                commonParsers: CommonParsers[T],
                                timeConstants: TimeConstants,
                                relativeAst: RelativeAst[T]) {
-  
   import internalizationParsers._
   import commonParsers._
   import timeConstants._

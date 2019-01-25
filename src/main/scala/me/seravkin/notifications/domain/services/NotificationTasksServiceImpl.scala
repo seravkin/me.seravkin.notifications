@@ -29,7 +29,7 @@ case class NotificationTasksServiceImpl[F[_]: Monad](systemDateTime: SystemDateT
         case _ => Button("Отменить", DeleteNotification(0, notification.id, "")) :: Nil
       })
 
-  //TODO: move to another service
+  // TODO: move to another service
   def next(notification: Notification): Option[Notification] = notification.dates match {
     case c: Confirmation => c.next(systemDateTime.now).map(d => notification.copy(dates = d))
     case d: OneDate => d.next(systemDateTime.now).map(d => notification.copy(dates = d))

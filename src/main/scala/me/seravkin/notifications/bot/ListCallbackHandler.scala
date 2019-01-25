@@ -15,15 +15,12 @@ import me.seravkin.tg.adapter.matching.ContainsData
 
 object ListCallbackHandler {
 
-  def apply[F[_]: Monad](user: PersistedUser, pageView: PageView[F],
-                         notificationsRepository: NotificationsRepository[F],
-                         notificationChatService: NotificationChatService[F],
-                         chatStateRepository: ChatStateRepository[ChatState, F],
-                         sender: Sender[F]): BotHandler[CallbackQuery, F] = hasChatId { chatId => {
-
-      case HasMessage(ContainsData(ChangePage(id, skip, take))) =>
-        pageView.editPage(id, user, chatId, skip, take)
-
+  def apply[F[_] : Monad](user: PersistedUser, pageView: PageView[F],
+                          notificationsRepository: NotificationsRepository[F],
+                          notificationChatService: NotificationChatService[F],
+                          chatStateRepository: ChatStateRepository[ChatState, F],
+                          sender: Sender[F]): BotHandler[CallbackQuery, F] = hasChatId { chatId =>
+    def deletions: BotHandler[CallbackQuery, F] = {
       case HasMessage(ContainsData(DeleteNotification(msgId, notificationId, ChangePage(_, skip, take)))) =>
         for (_ <- notificationsRepository.deactivate(notificationId :: Nil);
              _ <- pageView.editPage(msgId, user, chatId, skip, take))
@@ -31,6 +28,11 @@ object ListCallbackHandler {
 
       case HasMessage(ContainsData(DeleteNotification(_, notificationId, _))) =>
         notificationsRepository.deactivate(notificationId :: Nil)
+    }
+
+    def changes: BotHandler[CallbackQuery, F] = {
+      case HasMessage(ContainsData(ChangePage(id, skip, take))) =>
+        pageView.editPage(id, user, chatId, skip, take)
 
       case HasMessage(ContainsData(ChangeNotificationTimeAndMenu(_, notificationId, _))) =>
         for (_ <- notificationsRepository.deactivate(notificationId :: Nil);
@@ -38,22 +40,26 @@ object ListCallbackHandler {
           yield ()
 
       case HasMessage(ContainsData(ChangeNotificationText(_, notificationId, _))) =>
-        for(_ <- chatStateRepository.set(chatId, InControlWaitingForTextEdit(notificationId));
-            _ <- sender.ask(chatId, "Введите желаемый текст для напоминания:"))
+        for (_ <- chatStateRepository.set(chatId, InControlWaitingForTextEdit(notificationId));
+             _ <- sender.ask(chatId, "Введите желаемый текст для напоминания:"))
           yield ()
 
       case HasMessage(ContainsData(ChangeNotificationTime(id))) =>
         notificationChatService.changeNotificationDate(chatId, id)
+    }
 
+    def openMenu: BotHandler[CallbackQuery, F] = {
       case HasMessage(message@ContainsData(OpenNotificationMenu(msgId, notificationId, commandToReturn))) =>
         (for (notification <- OptionT(notificationsRepository(notificationId));
-              id           <- OptionT.fromOption[F](message.message.map(_.chat.id));
-              _            <- OptionT.liftF(sender.ask(id, s"Редактирование: ${notification.text}",
+              id <- OptionT.fromOption[F](message.message.map(_.chat.id));
+              _ <- OptionT.liftF(sender.ask(id, s"Редактирование: ${notification.text}",
                 Button("Назад", commandToReturn) ::
                   Button("Перенести", ChangeNotificationTimeAndMenu(msgId, notificationId, commandToReturn)) ::
                   Button("Изменить", ChangeNotificationText(msgId, notificationId, commandToReturn)) ::
                   Button("Удалить", DeleteNotification(msgId, notificationId, commandToReturn)) :: Nil, Some(msgId))))
           yield ()).getOrElseF(Monad[F].unit)
     }
+
+    deletions.orElse(changes).orElse(openMenu)
   }
 }

@@ -1,6 +1,5 @@
 package me.seravkin.notifications.bot
 
-import cats._
 import com.bot4s.telegram.models.Message
 import me.seravkin.notifications.infrastructure.messages.Sender
 import me.seravkin.tg.adapter.matching._
@@ -16,7 +15,7 @@ object HelpHandler {
     "/version - Показывает текущую версию"
 
 
-  def apply[F[_]: Monad](sender: Sender[F]): BotHandler[Message, F] = {
+  def apply[F[_]](sender: Sender[F]): BotHandler[Message, F] = {
     case HasMessage(message@ContainsText("/help")) =>
       sender.tell(message.chat.id, HELP_TEXT)
 

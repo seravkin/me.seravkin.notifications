@@ -1,10 +1,16 @@
 name := "me.seravkin.notifications"
 
-version := "0.4.2"
+version := "0.4.3"
 
 scalaVersion := "2.12.7"
 
 assemblyJarName in assembly := "me-seravkin-notifications.jar"
+
+lazy val compileScalastyle = taskKey[Unit]("compileScalastyle")
+
+compileScalastyle := scalastyle.in(Compile).toTask("").value
+
+(compile in Compile) := ((compile in Compile) dependsOn compileScalastyle).value
 
 scalacOptions ++= Seq(
     "-deprecation",                      // Emit warning and location for usages of deprecated APIs.

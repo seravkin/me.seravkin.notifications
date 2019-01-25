@@ -52,8 +52,8 @@ package object bot {
       end.map(d => s"с окончанием в $d").getOrElse("")
   }
 
-  //TODO: Правильное отображение для других типов
-  //TODO: выразить через Show[T]
+  // TODO: Правильное отображение для других типов
+  // TODO: выразить через Show[T]
   implicit def showForListOfNotifications(implicit show: Show[Dates]): Show[List[Notification]] = Show.show { notifications =>
     "Напоминания:\n" +
       notifications.collect {

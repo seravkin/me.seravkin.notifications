@@ -13,12 +13,10 @@ final class TimeParsers[T](internalizationParsers: InternalizationParsers,
                            timeAst: TimeAst[T],
                            dateAndTimeAst: DateAndTimeAst[T, T, T],
                            relativeAst: RelativeAst[T]) {
-  
   import internalizationParsers._
   import timeConstants._
   import dateParsers._
   import commonParsers._
-  
   def inSameTime: Parser[T] = anyOf(CurrentTime) -| { _ => timeAst.inCurrentTime }
 
   def time: Parser[T] = formattedTime | inSameTime

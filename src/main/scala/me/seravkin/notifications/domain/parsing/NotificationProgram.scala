@@ -5,7 +5,6 @@ import java.time.Duration
 sealed trait NotificationProgram
 
 object NotificationProgram {
-  
   final case class ForUser(username: String, notificationProgram: NotificationProgram) extends NotificationProgram
 
   sealed trait Recurrent extends NotificationProgram
@@ -36,4 +35,3 @@ object NotificationProgram {
 
 
 }
-
