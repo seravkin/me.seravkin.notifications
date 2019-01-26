@@ -98,7 +98,7 @@ final class Wiring[F[_]: Concurrent: Timer] {
     val bot = botFor(new TrieChatStateRepository[ChatState, BotF[F, ?]](map, Nop), adapter)
 
     def schedule: F[Unit] =
-      Timer[F].sleep(FiniteDuration(config.secondsForScheduler.toLong,TimeUnit.SECONDS)) >>
+      Timer[F].sleep(FiniteDuration(config.bot.jobs.interval.toLong,TimeUnit.SECONDS)) >>
       interpreterK(service.sendNotificationsIfNeeded()).attempt >>
       Sync[F].suspend(schedule)
 

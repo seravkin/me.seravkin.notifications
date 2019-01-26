@@ -1,10 +1,15 @@
 name := "me.seravkin.notifications"
 
-version := "0.4.3"
+version := "0.4.4"
 
 scalaVersion := "2.12.7"
 
 assemblyJarName in assembly := "me-seravkin-notifications.jar"
+
+enablePlugins(BuildInfoPlugin)
+
+buildInfoKeys := Seq[BuildInfoKey](name, version)
+buildInfoPackage := "me.seravkin.notifications"
 
 lazy val compileScalastyle = taskKey[Unit]("compileScalastyle")
 
@@ -74,10 +79,11 @@ val dependencies = new {
   val doobieV    = "0.6.0"
   val scalatestV = "3.0.4"
   val parserComV = "1.0.4"
-  val hikariCpV  = "2.7.7"
+  val hikariCpV  = "3.2.0"
   val tsConfigV  = "1.3.2"
   val attoV      = "0.6.4"
   val catsMtlV   = "0.4.0"
+  val pureCfgV   = "0.10.1"
 
   val tgBot4s = Seq(
     "com.bot4s" %% "telegram-core"          % tgb4sV,
@@ -92,6 +98,10 @@ val dependencies = new {
 
   val parser = Seq(
     "org.tpolecat" %% "atto-core" % attoV
+  )
+
+  val pureconfig = Seq(
+    "com.github.pureconfig" %% "pureconfig" % pureCfgV
   )
 
   val doobie = Seq(
@@ -118,5 +128,6 @@ libraryDependencies ++= Seq(
   dependencies.parser,
   dependencies.doobie,
   dependencies.config,
+  dependencies.pureconfig,
   dependencies.scalatest
 ).flatten

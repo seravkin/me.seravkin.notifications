@@ -21,7 +21,7 @@ object Main extends IOApp {
     config <- Configuration.load();
     source <- dataSource(config);
     adapter = new TelegramBotAdapter(
-      new ScalajHttpClient(config.telegramApiKey),
+      new ScalajHttpClient(config.bot.key),
       new Wiring[IO].create(config,
         source,
         new ReaderInterpreter(blockingEc, source.getConnection),
@@ -32,7 +32,7 @@ object Main extends IOApp {
 
 
   private[this] def dataSource(config: NotificationConfiguration): IO[HikariDataSource] = IO {
-    new HikariDataSource(config.hikariConfig.toHikariConfig)
+    new HikariDataSource(config.database.toHikariConfig)
   }
 
 
