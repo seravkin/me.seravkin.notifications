@@ -35,8 +35,9 @@ object LegacyInternationalization extends Internationalization {
     case Second => "секунда" :: "секунды" ::  "секунд" :: "сек" :: "c" :: "seconds" :: "second" :: "sec" :: "s" :: Nil
     case Minute => "минуты" :: "минута" :: "минут" :: "мин" :: "м" :: "minutes" :: "minute" :: "min" :: "m" :: Nil
     case Hour => "часов" :: "часа" :: "час" :: "ч" :: "hours" :: "hour" :: "h" :: Nil
-    case Day => "дней" :: "день" :: "дня" :: "д":: "days" :: "sday" :: "d" :: Nil
+    case Day => "число" :: "числа" :: "дней" :: "день" :: "дня" :: "д":: "days" :: "sday" :: "d" :: Nil
     case Week => "неделю" :: "недели" :: "неделя" :: "недель" :: "нед" :: "week" :: "weeks" :: Nil
+    case MonthPeriod => "месяц" :: "месяца" :: "month" :: Nil
   }
 
   private[this] val numerals: Translator = {
@@ -58,6 +59,7 @@ object LegacyInternationalization extends Internationalization {
     case In => "во" :: "в" :: Nil
     case CurrentTime => "это же время" :: "текущее время" :: "current time" :: Nil
     case EveryDayIn => "каждый день в" :: Nil
+    case EveryMonthIn => "каждый месяц" :: Nil
     case InAsInTime => "через" :: Nil
     case ForUserString => "для" :: "for" :: Nil
     case With => "с" :: Nil

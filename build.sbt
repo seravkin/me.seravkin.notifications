@@ -1,6 +1,6 @@
 name := "me.seravkin.notifications"
 
-version := "0.4.4"
+version := "0.4.5"
 
 scalaVersion := "2.12.7"
 
@@ -84,6 +84,7 @@ val dependencies = new {
   val attoV      = "0.6.4"
   val catsMtlV   = "0.4.0"
   val pureCfgV   = "0.10.1"
+  val flywayV    = "5.2.4"
 
   val tgBot4s = Seq(
     "com.bot4s" %% "telegram-core"          % tgb4sV,
@@ -109,7 +110,8 @@ val dependencies = new {
     "org.tpolecat" %% "doobie-hikari"    % doobieV,
     "org.tpolecat" %% "doobie-postgres"  % doobieV,
     "org.tpolecat" %% "doobie-scalatest" % doobieV % "test",
-    "com.zaxxer"   %  "HikariCP"         % hikariCpV
+    "com.zaxxer"   %  "HikariCP"         % hikariCpV,
+    "org.flywaydb" %  "flyway-core"      % flywayV
   )
 
   val config = Seq(

@@ -9,6 +9,7 @@ object NotificationProgram {
 
   sealed trait Recurrent extends NotificationProgram
 
+  final case class EveryDaysOfMonth(days: Set[Int], recurrent: NotificationProgram) extends Recurrent
   final case class EveryDaysOfWeek(days: Set[Int], recurrent: NotificationProgram) extends Recurrent
   final case class InTime(hours: Int, minutes: Int) extends Recurrent
   final case class Before(day: Int, month: Int, year: Option[Int], recurrent: NotificationProgram) extends Recurrent

@@ -21,11 +21,11 @@ class DatesSpec extends FlatSpec with Matchers {
   }
 
   it should "point on given day of week if periodic" in {
-    Periodic(12, 12, Set(1), None, None)(previousNow).get.notificationDate should be (LocalDateTime.of(2018, 10, 16, 12, 12))
+    Periodic(12, 12, Set(1), RecurrencyType.Week, None, None)(previousNow).get.notificationDate should be (LocalDateTime.of(2018, 10, 16, 12, 12))
   }
 
   it should "move correctly on next days of week if periodic" in {
-    val startAtWednesday = Periodic(12, 12, Set(0, 2, 4), None, None)(previousNow).get
+    val startAtWednesday = Periodic(12, 12, Set(0, 2, 4), RecurrencyType.Week, None, None)(previousNow).get
 
     val toBeOnFriday = startAtWednesday.next(startAtWednesday.notificationDate)
 
@@ -36,8 +36,26 @@ class DatesSpec extends FlatSpec with Matchers {
     toBeOnNextMonday.map(_.notificationDate) should be (Some(LocalDateTime.of(2018, 10, 15, 12, 12)))
   }
 
+  it should "move correctly on first day of month" in {
+    val start = Periodic(12, 12, Set(0), RecurrencyType.Month, None, None)(previousNow).get
+
+    start.notificationDate should be (LocalDateTime.of(2018, 11, 1, 12, 12))
+  }
+
+  it should "move correctly on next days of month if periodic" in {
+    val startAtWedndesday = Periodic(12, 12, Set(14), RecurrencyType.Month, None, None)(previousNow).get
+
+    val toBeInNovember = startAtWedndesday.next(startAtWedndesday.notificationDate)
+
+    val toBeInDecember = toBeInNovember.flatMap(n => n.next(n.notificationDate))
+
+    startAtWedndesday.notificationDate should be (LocalDateTime.of(2018, 10, 15, 12, 12))
+    toBeInNovember.map(_.notificationDate) should be (Some(LocalDateTime.of(2018, 11, 15, 12, 12)))
+    toBeInDecember.map(_.notificationDate) should be (Some(LocalDateTime.of(2018, 12, 15, 12, 12)))
+  }
+
   it should "respect given start date if periodic" in {
-    val startOnFriday = Periodic(12, 12, Set(0, 2, 4), Some(LocalDateTime.of(2018, 10, 11, 12, 12)), None)(previousNow).get
+    val startOnFriday = Periodic(12, 12, Set(0, 2, 4), RecurrencyType.Week, Some(LocalDateTime.of(2018, 10, 11, 12, 12)), None)(previousNow).get
 
     val toBeOnNextMonday = startOnFriday.next(startOnFriday.notificationDate)
 
@@ -46,7 +64,7 @@ class DatesSpec extends FlatSpec with Matchers {
   }
 
   it should "respect given end date if periodic" in {
-    val startAtWednesday = Periodic(12, 12, Set(0, 2, 4), None, Some(LocalDateTime.of(2018, 10, 11, 12, 12)))(previousNow).get
+    val startAtWednesday = Periodic(12, 12, Set(0, 2, 4), RecurrencyType.Week, None, Some(LocalDateTime.of(2018, 10, 11, 12, 12)))(previousNow).get
 
     val toBeOnFriday = startAtWednesday.next(startAtWednesday.notificationDate)
 

@@ -104,7 +104,7 @@ class NotificationTasksServiceSpec extends FlatSpec with Matchers {
     val date = LocalDateTime.of(2018, 10, 10, 10, 10)
 
     val initialState = MockBotState(List(PersistedUser(1, Some(1),"")), List(
-      Notification(1, 1, "test1", true, Periodic(9, 59, (0 until 7).toSet, None, None)(date.minusDays(1)).get)
+      Notification(1, 1, "test1", true, Periodic(9, 59, (0 until 7).toSet, RecurrencyType.Week, None, None)(date.minusDays(1)).get)
     ))
 
     val service = notificationTaskService(date)
@@ -128,7 +128,7 @@ class NotificationTasksServiceSpec extends FlatSpec with Matchers {
     val date = LocalDateTime.of(2018, 10, 10, 10, 10)
 
     val initialState = MockBotState(List(PersistedUser(1, Some(1),"")), List(
-      Notification(1, 1, "test1", true, Periodic(9, 59, (0 until 7).toSet, None, None)(date.minusDays(1)).get)
+      Notification(1, 1, "test1", true, Periodic(9, 59, (0 until 7).toSet, RecurrencyType.Week, None, None)(date.minusDays(1)).get)
     ))
 
     val service = notificationTaskService(date)
@@ -143,7 +143,7 @@ class NotificationTasksServiceSpec extends FlatSpec with Matchers {
     val date = LocalDateTime.of(2018, 10, 10, 10, 10)
 
     val initialState = MockBotState(List(PersistedUser(1, Some(1),"")), List(
-      Notification(1, 1, "test1", true, Periodic(9, 59, (0 until 7).toSet, None, None)(date.minusDays(1)).get)
+      Notification(1, 1, "test1", true, Periodic(9, 59, (0 until 7).toSet, RecurrencyType.Week, None, None)(date.minusDays(1)).get)
     ))
 
     val service = notificationTaskService(date)

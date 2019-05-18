@@ -56,4 +56,7 @@ object NotificationProgramAst extends DateAst[NotificationProgram]
 
   override def confirmation(duration: Option[Duration], t: NotificationProgram): NotificationProgram =
     WithConfirmation(duration, t)
+
+  override def everyDayOfMonth(days: Set[Int], t: NotificationProgram): NotificationProgram =
+    EveryDaysOfMonth(days, t)
 }

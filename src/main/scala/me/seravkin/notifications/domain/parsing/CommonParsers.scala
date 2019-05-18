@@ -25,6 +25,9 @@ final class CommonParsers[T](internalizationParsers: InternalizationParsers,
 
   def stringInt: Parser[Int] = 0.to(9).map(numeral).reduce { _ | _ }
 
+  def manyDaysOfMonth: Parser[Set[Int]] = int.filter(_ <= 28).sepBy1(Atto.ws ~> Atto.string(",") <~ Atto.ws) -|
+    { _.toList.toSet }
+
   def manyDaysOfWeek: Parser[Set[Int]] = daysOfWeek
     .sepBy1(Atto.ws ~> Atto.string(",") <~ Atto.ws) -| { _.toList.toSet }
 

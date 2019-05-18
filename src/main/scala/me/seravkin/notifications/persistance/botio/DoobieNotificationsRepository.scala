@@ -23,7 +23,8 @@ final class DoobieNotificationsRepository[F[_]: Monad] extends NotificationsRepo
                                                minute: Option[Int] = None,
                                                days: Option[String] = None,
                                                start: Option[LocalDateTime] = None,
-                                               end: Option[LocalDateTime] = None) {
+                                               end: Option[LocalDateTime] = None,
+                                               recurrencyType: Option[String] = None) {
 
 
 
@@ -32,8 +33,10 @@ final class DoobieNotificationsRepository[F[_]: Monad] extends NotificationsRepo
       case "Confirmation" => dateToNotificate.map2(periodInSeconds) { case (dt, per) =>
         Notification(id, userId, text, isActive, Confirmation(dt, Duration.ofSeconds(per)))
       }
-      case "Periodic" => (dateToNotificate, hour, minute, days.map(_.split(',').map(_.toInt).toSet)).mapN { case (dt, h, m, d) =>
-        Notification(id, userId, text, isActive, Periodic(dt, h, m, d, start, end))
+      case "Periodic" => (dateToNotificate, hour, minute, days.map(_.split(',').map(_.toInt).toSet), recurrencyType)
+        .mapN { case (dt, h, m, d, r) =>
+        Notification(id, userId, text, isActive,
+          Periodic(dt, h, m, d, if (r == "Week") RecurrencyType.Week else RecurrencyType.Month, start, end))
       }
     }
 
@@ -46,9 +49,12 @@ final class DoobieNotificationsRepository[F[_]: Monad] extends NotificationsRepo
       case Confirmation(dt, period) =>
         NotificationFlatten(nt.id, nt.userId, nt.text, "Confirmation", nt.isActive,
         Some(dt), Some(period.getSeconds))
-      case Periodic(dt, hour, minute, days, start, end) =>
+      case Periodic(dt, hour, minute, days, recType, start, end) =>
         NotificationFlatten(nt.id, nt.userId, nt.text, "Periodic", nt.isActive, Some(dt), None, Some(hour), Some(minute),
-          Some(days.map(_.toString).reduce { _ + "," + _}), start, end)
+          Some(days.map(_.toString).reduce { _ + "," + _}), start, end, Some(recType match {
+            case RecurrencyType.Week => "Week"
+            case RecurrencyType.Month => "Month"
+          }))
     }
   }
 
@@ -59,7 +65,7 @@ final class DoobieNotificationsRepository[F[_]: Monad] extends NotificationsRepo
     )
 
   override def apply(id: Long): BotF[F, Option[Notifications.Notification]] = botIO {
-    sql"SELECT id, id_user, text, kind, is_active, dt_to_notificate, period, hour, minute, days, start, finish FROM notifications WHERE id = $id"
+    sql"SELECT id, id_user, text, kind, is_active, dt_to_notificate, period, hour, minute, days, start, finish, recurrency_type FROM notifications WHERE id = $id"
       .read[NotificationFlatten]
       .last
       .map(_.flatMap(_.toNotification))
@@ -67,7 +73,7 @@ final class DoobieNotificationsRepository[F[_]: Monad] extends NotificationsRepo
 
 
   override def apply(user: PersistedUser): BotF[F, List[Notifications.Notification]] = botIO {
-    sql"SELECT id, id_user, text, kind, is_active, dt_to_notificate, period, hour, minute, days, start, finish  FROM notifications WHERE is_active = TRUE AND id_user = ${user.id}"
+    sql"SELECT id, id_user, text, kind, is_active, dt_to_notificate, period, hour, minute, days, start, finish, recurrency_type  FROM notifications WHERE is_active = TRUE AND id_user = ${user.id}"
       .read[NotificationFlatten]
       .toList
       .map(_.flatMap(_.toNotification))
@@ -77,10 +83,10 @@ final class DoobieNotificationsRepository[F[_]: Monad] extends NotificationsRepo
       val flatten = NotificationFlatten(t)
 
       sql"""INSERT INTO notifications
-            (id_user, text, kind, is_active, dt_to_notificate, period, hour, minute, days, start, finish )
+            (id_user, text, kind, is_active, dt_to_notificate, period, hour, minute, days, start, finish, recurrency_type)
             VALUES (${flatten.userId},${flatten.text},${flatten.kind},TRUE,
                     ${flatten.dateToNotificate}, ${flatten.periodInSeconds}, ${flatten.hour}, ${flatten.minute},
-                    ${flatten.days}, ${flatten.start}, ${flatten.end}) RETURNING id"""
+                    ${flatten.days}, ${flatten.start}, ${flatten.end}, ${flatten.recurrencyType}) RETURNING id"""
         .update
         .withGeneratedKeys[Long]("id")
         .compile
@@ -108,7 +114,7 @@ final class DoobieNotificationsRepository[F[_]: Monad] extends NotificationsRepo
   }
 
   private[this] def pageOfNotifications(user: PersistedUser, skip: Int, take: Int): BotF[F, List[Notification]] = botIO {
-    sql"""SELECT id, id_user, text, kind, is_active, dt_to_notificate, period, hour, minute, days, start, finish
+    sql"""SELECT id, id_user, text, kind, is_active, dt_to_notificate, period, hour, minute, days, start, finish, recurrency_type
           FROM notifications WHERE is_active = TRUE AND id_user = ${user.id}
           ORDER BY dt_to_notificate DESC LIMIT $take OFFSET $skip"""
       .read[NotificationFlatten]
@@ -118,7 +124,7 @@ final class DoobieNotificationsRepository[F[_]: Monad] extends NotificationsRepo
 
 
   override def active(now: LocalDateTime): BotF[F, List[(Long, Notification)]] = botIO {
-    sql"""SELECT u.chat_id, n.id, n.id_user, n.text, n.kind, n.is_active, n.dt_to_notificate, n.period, n.hour, n.minute, n.days, n.start, n.finish
+    sql"""SELECT u.chat_id, n.id, n.id_user, n.text, n.kind, n.is_active, n.dt_to_notificate, n.period, n.hour, n.minute, n.days, n.start, n.finish, n.recurrency_type
           FROM notifications n
           JOIN users u ON n.id_user = u.id
           WHERE n.is_active = TRUE AND $now > n.dt_to_notificate"""

@@ -71,6 +71,13 @@ class DurationParserSpec extends FlatSpec with Matchers {
       InCurrentTime))("22 июля 2018 в это же время")
   }
 
+  it should "parse in weeks and time" in {
+    assertParsedTime(FromFormattedDate(InDays(7), FormattedTime(13,45)))("через неделю в 13:45")
+  }
+
+  it should "parse in multiple weeks and current time" in {
+    assertParsedTime(FromFormattedDate(InDays(3 * 7), InCurrentTime))("через три недели в это же время")
+  }
 
   it should "parse in days and current time" in {
     assertParsedTime(FromFormattedDate(InDays(3), InCurrentTime))("через 3 дня в это же время")
@@ -110,6 +117,10 @@ class DurationParserSpec extends FlatSpec with Matchers {
 
   it should "parse on every day in given time" in {
     assertParsedTime(InTime(12, 0))("каждый день в 12:00")
+  }
+
+  it should "parse on every nth day of month in given time" in {
+    assertParsedTime(EveryDaysOfMonth(Set(2), InTime(14, 30)))("каждый месяц 3 числа в 14:30")
   }
 
   it should "parse on wednesday in given time" in {

@@ -12,7 +12,7 @@ import me.seravkin.notifications.bot.commands.DeleteNotification
 import me.seravkin.notifications.bot.services.{NotificationChatServiceImpl, PageViewImpl, TimeBeautifyServiceImpl}
 import me.seravkin.notifications.domain.Notifications.Notification
 import me.seravkin.notifications.domain.PersistedUser
-import me.seravkin.notifications.domain.interpreter.Dates.{OneDate, Periodic}
+import me.seravkin.notifications.domain.interpreter.Dates.{OneDate, Periodic, RecurrencyType}
 import me.seravkin.notifications.domain.interpreter._
 import me.seravkin.notifications.domain.parsing.CombinatorMomentInFutureParser
 import me.seravkin.notifications.infrastructure.messages.Button
@@ -431,9 +431,9 @@ class NotificationBotSpec extends FlatSpec with Matchers {
   private[this] val existingNotifications =  Vector(
     Notification(1, defaultUserId, "test 1",true, OneDate(LocalDateTime.of(2018,12,1,12,0))),
     Notification(2, defaultUserId, "test 1 na", false, OneDate(LocalDateTime.of(2018,12,1,12,0))),
-    Notification(3, defaultUserId, "rec test 1", true, Periodic(LocalDateTime.now(), 10, 10, Set(1), None, None)),
-    Notification(4, defaultUserId, "rec test 1 - na", false, Periodic(LocalDateTime.now(), 10, 10, Set(1), None, None)),
-    Notification(5, defaultUserId + 1, "asdasd", true, Periodic(LocalDateTime.now(), 10, 10, Set(1), None, None))
+    Notification(3, defaultUserId, "rec test 1", true, Periodic(LocalDateTime.now(), 10, 10, Set(1), RecurrencyType.Month, None, None)),
+    Notification(4, defaultUserId, "rec test 1 - na", false, Periodic(LocalDateTime.now(), 10, 10, Set(1),RecurrencyType.Month, None, None)),
+    Notification(5, defaultUserId + 1, "asdasd", true, Periodic(LocalDateTime.now(), 10, 10, Set(1), RecurrencyType.Month, None, None))
 
   )
 

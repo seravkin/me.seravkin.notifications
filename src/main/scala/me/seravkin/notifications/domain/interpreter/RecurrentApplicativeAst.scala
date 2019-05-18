@@ -7,10 +7,17 @@ import cats.mtl.ApplicativeAsk
 import cats.syntax.flatMap._
 import cats.syntax.functor._
 import me.seravkin.notifications.domain.ast.RecurrentAst
-import me.seravkin.notifications.domain.interpreter.Dates.Periodic
+import me.seravkin.notifications.domain.interpreter.Dates.{Periodic, RecurrencyType}
 
 final class RecurrentApplicativeAst[F[_]: MonadError[?[_], String]
                                         : DateProvider] extends RecurrentAst[F[Dates]] {
+
+  override def everyDayOfMonth(days: Set[Int], t: F[Dates]): F[Dates] =
+    Monad[F].map(t) {
+      case p: Periodic => p.copy(days = days, recurrencyType = RecurrencyType.Month)
+      case other => other
+    }
+
   override def everyDayOfWeek(days: Set[Int], recurrent: F[Dates]): F[Dates] =
     Monad[F].map(recurrent) {
       case p: Periodic => p.copy(days = days)
@@ -34,10 +41,11 @@ final class RecurrentApplicativeAst[F[_]: MonadError[?[_], String]
       }
 
   override def inTime(hours: Int, minutes: Int): F[Dates] = ApplicativeAsk[F, LocalDateTime].ask.flatMap { now =>
-    Periodic(hours, minutes, (0 until 7).toSet, None, None)(now) match {
+    Periodic(hours, minutes, (0 until 7).toSet, RecurrencyType.Week, None, None)(now) match {
       case Some(periodic) => Monad[F].pure(periodic)
       case None => ApplicativeError[F, String]
         .raiseError[Dates](s"Напоминание не будет запущено т.к. $now позже даты конца напоминаний")
     }
   }
+
 }

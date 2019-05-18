@@ -9,6 +9,7 @@ object Words {
   object Hour extends Word
   object Day extends Word
   object Week extends Word
+  object MonthPeriod extends Word
 
   sealed trait Month {
     def toInt: Int
@@ -56,6 +57,7 @@ object Words {
   object AtEvening extends Word
 
   object EveryDayIn extends Word
+  object EveryMonthIn extends Word
   object Today extends Word
   object Tomorrow extends Word
   object DayAfterTomorrow extends Word

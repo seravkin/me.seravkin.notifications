@@ -9,6 +9,7 @@ import com.zaxxer.hikari.HikariDataSource
 import me.seravkin.notifications.infrastructure.config.Configuration
 import me.seravkin.notifications.infrastructure.config.Configuration.NotificationConfiguration
 import me.seravkin.notifications.infrastructure.interpreters.{ReaderInterpreter, UnsafeIOInterpreter}
+import me.seravkin.notifications.persistance.migrations.FlywayMigrator
 import me.seravkin.tg.adapter.TelegramBotAdapter
 
 import scala.concurrent.ExecutionContext
@@ -18,8 +19,10 @@ object Main extends IOApp {
   private[this] implicit val blockingEc: ExecutionContext = ExecutionContext.fromExecutorService(Executors.newCachedThreadPool())
 
   override def run(args: List[String]): IO[ExitCode] = for (
-    config <- Configuration.load();
-    source <- dataSource(config);
+    config   <- Configuration.load();
+    source   <- dataSource(config);
+    migrator =  new FlywayMigrator[IO];
+    _        <- migrator.migrate(source);
     adapter = new TelegramBotAdapter(
       new ScalajHttpClient(config.bot.key),
       new Wiring[IO].create(config,
@@ -27,7 +30,7 @@ object Main extends IOApp {
         new ReaderInterpreter(blockingEc, source.getConnection),
         UnsafeIOInterpreter, _)
     ) with Polling;
-    _ <- adapter.runSafe()
+    _        <- adapter.runSafe()
   ) yield ExitCode.Success
 
 

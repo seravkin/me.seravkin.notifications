@@ -30,7 +30,8 @@ final class TimeBeautifyServiceImpl(systemDateTime: SystemDateTime) extends Time
       beautify(ldt)
     case Confirmation(localDateTime, period) =>
       s"${beautify(localDateTime)} с подтверждением каждые ${period.toString}"
-    case Periodic(localDateTime, _, _, days, _, _) =>
-      s"${beautify(localDateTime)} с напоминаниями в следующие дни недели: ${days.map(_ + 1).map(_.toString).reduce { _ + ", " + _ }}"
+    case Periodic(localDateTime, _, _, days, period, _, _) =>
+      val periodName = if(period == RecurrencyType.Month) "месяца" else "недели"
+      s"${beautify(localDateTime)} с напоминаниями в следующие дни $periodName: ${days.map(_ + 1).map(_.toString).reduce { _ + ", " + _ }}"
   }
 }

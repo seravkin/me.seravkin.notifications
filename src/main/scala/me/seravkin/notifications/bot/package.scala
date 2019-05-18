@@ -46,7 +46,7 @@ package object bot {
       s" в $localDateTime"
     case Dates.Confirmation(localDateTime, period) =>
       s" в $localDateTime с подтверждением каждые $period"
-    case Dates.Periodic(_, hour, minutes, days, start, end) =>
+    case Dates.Periodic(_, hour, minutes, days, _, start, end) =>
       s" в каждый из дней: ${days.map(showDay).reduce { _ + "," + _ }} в $hour:$minutes " +
       start.map(d => s"с началом в $d ").getOrElse("") +
       end.map(d => s"с окончанием в $d").getOrElse("")
