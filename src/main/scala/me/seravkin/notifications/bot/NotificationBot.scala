@@ -26,12 +26,9 @@ final case class NotificationBot[F[_] : Monad](usersRepository: UsersRepository[
 
   def apply(event: BotEvent): F[Unit] = event match {
     case ReceiveMessage(message) if message.chat.`type` == ChatType.Private =>
-      authenticate(message.from.flatMap(_.username), Some(message.chat.id)).flatMap {
-        case Some((state, user)) =>
-          processMessage(user)(state, message)
-        case _ =>
-          sender.tell(message.chat.id, "Пользователь не аутентифицирован для данного сервиса")
-      }
+      authenticateAndProcessMessage(message)
+    case ReceiveEditedMessage(message)  if message.chat.`type` == ChatType.Private =>
+      authenticateAndProcessMessage(message)
     case ReceiveCallbackQuery(query) if query.message.exists(_.chat.`type` == ChatType.Private) =>
       authenticate(query.from.username, query.message.map(_.chat.id)).flatMap {
         case Some((state, user)) =>
@@ -43,6 +40,15 @@ final case class NotificationBot[F[_] : Monad](usersRepository: UsersRepository[
       Monad[F].unit
 
   }
+
+  private[this] def authenticateAndProcessMessage(message: Message): F[Unit] =
+    authenticate(message.from.flatMap(_.username), Some(message.chat.id)).flatMap {
+      case Some((state, user)) =>
+        processMessage(user)(state, message)
+      case _ =>
+        sender.tell(message.chat.id, "Пользователь не аутентифицирован для данного сервиса")
+    }
+
 
   private[this] def authenticate(username: Option[String], chatId: Option[Long]): F[Option[(ChatState, PersistedUser)]] = (for (
     name   <- OptionT.fromOption[F](username);
