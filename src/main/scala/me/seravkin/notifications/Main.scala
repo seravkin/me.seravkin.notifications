@@ -8,7 +8,7 @@ import com.bot4s.telegram.clients.ScalajHttpClient
 import com.zaxxer.hikari.HikariDataSource
 import me.seravkin.notifications.infrastructure.config.Configuration
 import me.seravkin.notifications.infrastructure.config.Configuration.NotificationConfiguration
-import me.seravkin.notifications.infrastructure.interpreters.{ReaderInterpreter, UnsafeIOInterpreter}
+import me.seravkin.notifications.infrastructure.interpreters.ReaderInterpreter
 import me.seravkin.notifications.persistance.migrations.FlywayMigrator
 import me.seravkin.tg.adapter.TelegramBotAdapter
 
@@ -25,11 +25,7 @@ object Main extends IOApp {
     _        <- migrator.migrate(source);
     adapter = new TelegramBotAdapter(
       new ScalajHttpClient(config.bot.key),
-      new Wiring[IO].create(config,
-        source,
-        new ReaderInterpreter(blockingEc, source.getConnection),
-        UnsafeIOInterpreter, _)
-    ) with Polling;
+      new Wiring[IO].create(config, new ReaderInterpreter(blockingEc, source.getConnection), _)) with Polling;
     _        <- adapter.runSafe()
   ) yield ExitCode.Success
 

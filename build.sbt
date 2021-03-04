@@ -1,6 +1,6 @@
 name := "me.seravkin.notifications"
 
-version := "0.4.6"
+version := "0.4.7"
 
 scalaVersion := "2.12.7"
 
@@ -75,10 +75,8 @@ val dependencies = new {
   val catsV      = "1.4.0"
   val catsEffV   = "1.1.0"
   val tgAdapterV = "0.2.0"
-  val shapelessV = "2.3.3"
   val doobieV    = "0.6.0"
   val scalatestV = "3.0.4"
-  val parserComV = "1.0.4"
   val hikariCpV  = "3.2.0"
   val tsConfigV  = "1.3.2"
   val attoV      = "0.6.4"

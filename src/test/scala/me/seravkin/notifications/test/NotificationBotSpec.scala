@@ -376,7 +376,7 @@ class NotificationBotSpec extends FlatSpec with Matchers {
       chatInstance = "",
       data = Some(command))))
 
-  private[this] def send(text: String, user: User = defaultTgUser, date: MockDateTime = mockedDateTime) =
+  private[this] def send(text: String, user: User = defaultTgUser, date: MockDateTime[MockBotF] = mockedDateTime) =
     createBot(date)(ReceiveMessage(Message(-1, Some(user), 0, Chat(1, ChatType.Private), text = Some(text))))
 
   private[this] def editOfMessage(id: Int)(list: List[MockMessage]): MockMessage = {
@@ -415,7 +415,7 @@ class NotificationBotSpec extends FlatSpec with Matchers {
   private[this] val defaultUser = PersistedUser(1, Some(1), "test")
   private[this] val defaultTgUser = User(1, false, "1",username = Some("test"))
   private[this] val defaultUserId = defaultUser.id
-  private[this] val mockedDateTime = MockDateTime(LocalDateTime.of(2018, 8, 22, 12, 0, 0))
+  private[this] val mockedDateTime = MockDateTime[MockBotF](LocalDateTime.of(2018, 8, 22, 12, 0, 0))
 
   private[this] val hasNavigationButtons = hasButtonsWithNames("1","2","3", "->")(_)
   private[this] val hasEditButtons = hasButtonsWithNames("Назад", "Перенести", "Изменить","Удалить")(_)
@@ -453,7 +453,7 @@ class NotificationBotSpec extends FlatSpec with Matchers {
     new RecurrentApplicativeAst[ParserF]()
   )
 
-  private[this] def createBot(systemDateTime: SystemDateTime): NotificationBot[MockBotF] =
+  private[this] def createBot(systemDateTime: SystemDateTime[MockBotF]): NotificationBot[MockBotF] =
     NotificationBot[MockBotF](
       new MockUsersRepository(defaultUser),
       new MockChatStateRepository,

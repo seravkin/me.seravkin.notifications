@@ -1,8 +1,15 @@
-FROM hseeberger/scala-sbt AS build-env
+FROM hseeberger/scala-sbt:8u181_2.12.7_1.2.6 AS build-env
 
 WORKDIR /app
 
+COPY ./project/build.properties ./project/
+COPY ./project/plugins.sbt ./project/
+COPY ./build.sbt ./
+
+RUN sbt update
+
 COPY . ./
+
 RUN sbt assembly -batch
 
 FROM openjdk:8u181

@@ -21,7 +21,7 @@ final case class NotificationBot[F[_] : Monad](usersRepository: UsersRepository[
                                                notificationsRepository: NotificationsRepository[F],
                                                notificationChatService: NotificationChatService[F],
                                                pageView: PageView[F],
-                                               systemDateTime: SystemDateTime) extends (BotEvent => F[Unit]) {
+                                               systemDateTime: SystemDateTime[F]) extends (BotEvent => F[Unit]) {
 
 
   def apply(event: BotEvent): F[Unit] = event match {

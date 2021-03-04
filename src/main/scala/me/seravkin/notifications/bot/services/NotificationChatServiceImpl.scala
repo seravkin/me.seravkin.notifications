@@ -18,8 +18,8 @@ final class NotificationChatServiceImpl[F[_]: Monad](notificationsRepository: No
                                                      usersRepository: UsersRepository[F],
                                                      chatStateRepository: ChatStateRepository[ChatState, F],
                                                      momentInFutureParser: MomentInFutureParser[DatesFactory[F, Dates]],
-                                                     systemDateTime: SystemDateTime,
-                                                     timeBeautifyService: TimeBeautifyService,
+                                                     systemDateTime: SystemDateTime[F],
+                                                     timeBeautifyService: TimeBeautifyService[F],
                                                      sender: Sender[F]) extends NotificationChatService[F] {
 
   override def changeNotificationDate(chatId: Long, notificationId: Long): F[Unit] = {
@@ -42,13 +42,15 @@ final class NotificationChatServiceImpl[F[_]: Monad](notificationsRepository: No
 
   private[this] def tryParseAndInterpret(text: String): EitherT[F, String, Dates] = {
     for (factory <- EitherT.fromEither[F](momentInFutureParser.parseMomentInFuture(text));
-         result  <- factory(systemDateTime.now))
+         now     <- EitherT.liftF(systemDateTime.now);
+         result  <- factory(now))
       yield result
   }
 
   override def storeAndReply(user: PersistedUser, chatId: Long, text: String, time: Dates): F[Unit] = {
     for (_ <- notificationsRepository += Notification(0, user.id, text, isActive = true, time);
-         _ <- sender.tell(chatId, s"Напоминание поставлено и будет отправлено ${timeBeautifyService.beautify(time)}");
+         s <- timeBeautifyService.beautify(time);
+         _ <- sender.tell(chatId, s"Напоминание поставлено и будет отправлено $s");
          _ <- chatStateRepository.set(chatId, Nop))
       yield ()
   }

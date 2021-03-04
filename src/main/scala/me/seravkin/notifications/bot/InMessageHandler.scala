@@ -16,14 +16,14 @@ import me.seravkin.tg.adapter.matching._
 object InMessageHandler {
 
   def apply[F[_]: Monad](user: PersistedUser,
-                         systemDateTime: SystemDateTime,
+                         systemDateTime: SystemDateTime[F],
                          chatStateRepository: ChatStateRepository[ChatState, F],
                          notificationChatService: NotificationChatService[F],
                          notificationsRepository: NotificationsRepository[F],
                          sender: Sender[F]): BotHandler[Message, F] = {
 
-    def sendWarningIfNeeded(message: Message): F[Unit] = Monad[F].unit.flatMap(_ =>
-      if(23 <= systemDateTime.now.getHour || systemDateTime.now.getHour <= 2)
+    def sendWarningIfNeeded(message: Message): F[Unit] = systemDateTime.now.flatMap(now =>
+      if(23 <= now.getHour || now.getHour <= 2)
         sender.tell(message.chat.id, "Время около нуля, обратите внимание при выборе даты")
       else
         Monad[F].unit

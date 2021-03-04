@@ -6,12 +6,11 @@ import java.util.concurrent.TimeUnit
 import cats.data.{EitherT, Kleisli, ReaderT}
 import cats.syntax.flatMap._
 import cats.syntax.functor._
-import cats.syntax.applicativeError._
 import cats.mtl.implicits._
+import cats.syntax.applicativeError._
 import cats.effect.{Concurrent, Sync, Timer}
-import cats.{Defer, Id, MonadError, ~>}
+import cats.{Defer, MonadError, ~>}
 import com.bot4s.telegram.api.RequestHandler
-import com.zaxxer.hikari.HikariDataSource
 import doobie.util.transactor.Transactor
 import me.seravkin.notifications.bot.ChatState.Nop
 import me.seravkin.notifications.bot.services.{NotificationChatServiceImpl, PageViewImpl, TimeBeautifyServiceImpl}
@@ -73,25 +72,24 @@ final class Wiring[F[_]: Concurrent: Timer] {
         new DoobieUsersRepository[F],
         chatStateRepository,
         parser[DatesFactory[BotF[F, ?], ?]],
-        ActualSystemDateTime,
-        new TimeBeautifyServiceImpl(ActualSystemDateTime),
+        new ActualSystemDateTime,
+        new TimeBeautifyServiceImpl(new ActualSystemDateTime),
         new RequestHandlerSender[BotF[F, ?]](req)),
       new PageViewImpl(
         new DoobieNotificationsRepository[F],
         new RequestHandlerSender[BotF[F, ?]](req)
       ),
-      ActualSystemDateTime)
+      new ActualSystemDateTime)
 
   def create(config: NotificationConfiguration,
-             source: HikariDataSource,
              interpreterK: BotF[F, ?] ~> F,
-             toUnitK: F ~> Id,
              requestHandler: RequestHandler): F[Bot[F]] = {
+
     val adapter = new RequestHandlerAdapter[BotF[F, ?]](requestHandler)
     val map = new TrieMap[Long, ChatState]()
 
     val service = NotificationTasksServiceImpl(
-      ActualSystemDateTime,
+      new ActualSystemDateTime[BotF[F, ?]],
       new DoobieNotificationsRepository[F],
       new RequestHandlerSender[BotF[F, ?]](adapter))
 
