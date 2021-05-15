@@ -5,6 +5,14 @@ version := "0.4.7"
 scalaVersion := "2.13.5"
 
 assembly / assemblyJarName := "me-seravkin-notifications.jar"
+assembly / assemblyMergeStrategy  := {
+  case x if x.contains("io.netty.versions.properties") => MergeStrategy.discard
+  case x =>
+    val oldStrategy = (assembly / assemblyMergeStrategy).value
+    oldStrategy(x)
+}
+
+
 
 enablePlugins(BuildInfoPlugin)
 
