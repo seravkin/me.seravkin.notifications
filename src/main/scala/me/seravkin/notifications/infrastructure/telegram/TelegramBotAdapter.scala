@@ -2,7 +2,7 @@ package me.seravkin.notifications.infrastructure.telegram
 
 import cats.effect._
 import com.bot4s.telegram.api.RequestHandler
-import com.bot4s.telegram.cats.TelegramBot
+import com.bot4s.telegram.cats.{Polling, TelegramBot}
 import com.bot4s.telegram.models._
 import events._
 import org.asynchttpclient.Dsl.asyncHttpClient
@@ -15,7 +15,7 @@ import sttp.client3.asynchttpclient.cats.AsyncHttpClientCatsBackend
  * @param botFactory function to create bot from request handler
  */
 class TelegramBotAdapter(token: String, botFactory: RequestHandler[IO] => IO[Bot[IO]])(implicit contextShift: ContextShift[IO])
-  extends TelegramBot[IO](token, AsyncHttpClientCatsBackend.usingClient[IO](asyncHttpClient())) {
+  extends TelegramBot[IO](token, AsyncHttpClientCatsBackend.usingClient[IO](asyncHttpClient())) with Polling[IO] {
 
   def this(token: String, botFactory: RequestHandler[IO] => Bot[IO])(implicit dummyImplicit: DummyImplicit, contextShift: ContextShift[IO]) = {
     this(token, r => IO(botFactory(r)))
