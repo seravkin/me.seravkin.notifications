@@ -1,7 +1,6 @@
 package me.seravkin.notifications.test
 
 import java.time.LocalDateTime
-
 import cats._
 import cats.data._
 import cats.data.Kleisli._
@@ -17,12 +16,38 @@ import me.seravkin.notifications.domain.interpreter._
 import me.seravkin.notifications.domain.parsing.CombinatorMomentInFutureParser
 import me.seravkin.notifications.infrastructure.messages.Button
 import me.seravkin.notifications.infrastructure.random.Random
+import me.seravkin.notifications.infrastructure.telegram.events.{ReceiveCallbackQuery, ReceiveMessage}
 import me.seravkin.notifications.infrastructure.time.SystemDateTime
 import me.seravkin.notifications.test.mocks._
-import me.seravkin.tg.adapter.events._
 import org.scalatest._
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.should.Matchers
 
-class NotificationBotSpec extends FlatSpec with Matchers {
+class NotificationBotSpec extends AnyFlatSpec with Matchers {
+
+  private[this] val defaultUser = PersistedUser(1, Some(1), "test")
+  private[this] val defaultTgUser = User(1, isBot = false, "1",username = Some("test"))
+  private[this] val defaultUserId = defaultUser.id
+  private[this] val mockedDateTime = MockDateTime[MockBotF](LocalDateTime.of(2018, 8, 22, 12, 0, 0))
+
+  private[this] val hasNavigationButtons = hasButtonsWithNames("1","2","3", "->")(_)
+  private[this] val hasEditButtons = hasButtonsWithNames("Назад", "Перенести", "Изменить","Удалить")(_)
+
+  private[this] val helpText = "Бот c напоминаниями\n" +
+    "/in - Напоминает о событии через заданный интервал времени\n" +
+    "/show - Показывает активные напоминания\n" +
+    "/delete <id> - Удаляет напоминания с указанным id\n" +
+    "/change <id> - Изменяет дату и время на напоминании с указанным id\n" +
+    "/list - Показывает новый список напоминаний\n" +
+    "/version - Показывает текущую версию"
+
+  private[this] val existingNotifications =  Vector(
+    Notification(1, defaultUserId, "test 1",isActive = true, OneDate(LocalDateTime.of(2018,12,1,12,0))),
+    Notification(2, defaultUserId, "test 1 na", isActive = false, OneDate(LocalDateTime.of(2018,12,1,12,0))),
+    Notification(3, defaultUserId, "rec test 1", isActive = true, Periodic(LocalDateTime.now(), 10, 10, Set(1), RecurrencyType.Month, None, None)),
+    Notification(4, defaultUserId, "rec test 1 - na", isActive = false, Periodic(LocalDateTime.now(), 10, 10, Set(1),RecurrencyType.Month, None, None)),
+    Notification(5, defaultUserId + 1, "asdasd", isActive = true, Periodic(LocalDateTime.now(), 10, 10, Set(1), RecurrencyType.Month, None, None))
+  )
 
   "Notifications bot" should "show help when help command is sent" in {
     val dialogue = for(
@@ -59,7 +84,7 @@ class NotificationBotSpec extends FlatSpec with Matchers {
 
   it should "deny access for not authorized user" in {
     val dialogue = for(
-      _ <- send("/help", User(2, false,"2", username = Some("2")));
+      _ <- send("/help", User(2, isBot = false,"2", username = Some("2")));
       _ <- shouldAnswerWith(sentMessage)(hasExpected("Пользователь не аутентифицирован для данного сервиса"))
     ) yield ()
 
@@ -105,7 +130,7 @@ class NotificationBotSpec extends FlatSpec with Matchers {
 
   it should "send warning if now is near 00:00" in {
 
-    def send(command: String) =
+    def send(command: String): MockBotF[Unit] =
       this.send(command, date = MockDateTime(LocalDateTime.of(2018, 8, 22, 23, 30)))
 
     val dialogue = for(
@@ -412,32 +437,7 @@ class NotificationBotSpec extends FlatSpec with Matchers {
   private[this] def shouldAnswerWithTextThat(f: String => Boolean) =
     shouldAnswerWith(sentMessage)(predicate(f))
 
-  private[this] val defaultUser = PersistedUser(1, Some(1), "test")
-  private[this] val defaultTgUser = User(1, false, "1",username = Some("test"))
-  private[this] val defaultUserId = defaultUser.id
-  private[this] val mockedDateTime = MockDateTime[MockBotF](LocalDateTime.of(2018, 8, 22, 12, 0, 0))
-
-  private[this] val hasNavigationButtons = hasButtonsWithNames("1","2","3", "->")(_)
-  private[this] val hasEditButtons = hasButtonsWithNames("Назад", "Перенести", "Изменить","Удалить")(_)
-
-  private[this] val helpText = "Бот c напоминаниями\n" +
-    "/in - Напоминает о событии через заданный интервал времени\n" +
-    "/show - Показывает активные напоминания\n" +
-    "/delete <id> - Удаляет напоминания с указанным id\n" +
-    "/change <id> - Изменяет дату и время на напоминании с указанным id\n" +
-    "/list - Показывает новый список напоминаний\n" +
-    "/version - Показывает текущую версию"
-
-  private[this] val existingNotifications =  Vector(
-    Notification(1, defaultUserId, "test 1",true, OneDate(LocalDateTime.of(2018,12,1,12,0))),
-    Notification(2, defaultUserId, "test 1 na", false, OneDate(LocalDateTime.of(2018,12,1,12,0))),
-    Notification(3, defaultUserId, "rec test 1", true, Periodic(LocalDateTime.now(), 10, 10, Set(1), RecurrencyType.Month, None, None)),
-    Notification(4, defaultUserId, "rec test 1 - na", false, Periodic(LocalDateTime.now(), 10, 10, Set(1),RecurrencyType.Month, None, None)),
-    Notification(5, defaultUserId + 1, "asdasd", true, Periodic(LocalDateTime.now(), 10, 10, Set(1), RecurrencyType.Month, None, None))
-
-  )
-
-  type ParserF[A] = ReaderT[EitherT[MockBotF, String, ?], LocalDateTime, A]
+  type ParserF[A] = ReaderT[EitherT[MockBotF, String, *], LocalDateTime, A]
 
   private[this] def random[G[_]: Applicative]: Random[G] =
     (int: Int) => Applicative[G].pure(new util.Random(1).nextInt(int))

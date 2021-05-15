@@ -10,8 +10,8 @@ import me.seravkin.notifications.bot.services.{NotificationChatService, PageView
 import me.seravkin.notifications.domain.PersistedUser
 import me.seravkin.notifications.infrastructure.messages.{Button, Sender}
 import me.seravkin.notifications.infrastructure.state.ChatStateRepository
+import me.seravkin.notifications.infrastructure.telegram.matching.ContainsData
 import me.seravkin.notifications.persistance.NotificationsRepository
-import me.seravkin.tg.adapter.matching.ContainsData
 
 object ListCallbackHandler {
 

@@ -45,6 +45,6 @@ object Configuration {
       .map(f => ConfigFactory.parseFile(new File(f)))
       .getOrElse(ConfigFactory.load())
 
-    loadConfigOrThrow[NotificationConfigurationRoot](config).notifications
+    ConfigSource.fromConfig(config).loadOrThrow[NotificationConfigurationRoot].notifications
   }
 }

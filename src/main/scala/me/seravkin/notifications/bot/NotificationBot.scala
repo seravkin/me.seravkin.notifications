@@ -10,9 +10,9 @@ import me.seravkin.notifications.domain.interpreter.{Dates, DatesFactory}
 import me.seravkin.notifications.domain.parsing.MomentInFutureParser
 import me.seravkin.notifications.infrastructure.messages.Sender
 import me.seravkin.notifications.infrastructure.state.ChatStateRepository
+import me.seravkin.notifications.infrastructure.telegram.events.{BotEvent, ReceiveCallbackQuery, ReceiveEditedMessage, ReceiveMessage}
 import me.seravkin.notifications.infrastructure.time.SystemDateTime
 import me.seravkin.notifications.persistance.{NotificationsRepository, UsersRepository}
-import me.seravkin.tg.adapter.events._
 
 final case class NotificationBot[F[_] : Monad](usersRepository: UsersRepository[F],
                                                chatStateRepository: ChatStateRepository[ChatState, F],

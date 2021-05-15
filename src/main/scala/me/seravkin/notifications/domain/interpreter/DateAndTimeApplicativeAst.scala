@@ -7,7 +7,7 @@ import me.seravkin.notifications.domain.ast.DateAndTimeAst
 import me.seravkin.notifications.domain.interpreter.Dates.OneDate
 
 final class DateAndTimeApplicativeAst[F[_]: DateProvider
-                                          : MonadError[?[_], String]]
+                                          : MonadError[*[_], String]]
   extends DateAndTimeAst[F[Dates], F[Dates], F[Dates]] {
 
   private[this] def resultOrError(date: Dates, time: Dates): F[Dates] = (date, time) match {

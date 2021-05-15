@@ -1,14 +1,14 @@
 package me.seravkin.notifications.test.parsing
 
 import java.time.Duration
-
 import me.seravkin.notifications.domain.interpreter.NotificationProgramAst
 import me.seravkin.notifications.domain.parsing.NotificationProgram._
 import me.seravkin.notifications.domain.parsing.Period._
 import me.seravkin.notifications.domain.parsing.{NotificationProgram, _}
-import org.scalatest.{FlatSpec, Matchers}
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.should.Matchers
 
-class DurationParserSpec extends FlatSpec with Matchers {
+class DurationParserSpec extends AnyFlatSpec with Matchers {
 
   "DurationParser" should "parse simple message" in {
     assertParsedTime(FromDuration(Duration.ofSeconds(5)))("5 sec")

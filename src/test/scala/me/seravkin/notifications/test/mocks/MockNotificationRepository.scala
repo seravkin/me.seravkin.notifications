@@ -9,7 +9,7 @@ import me.seravkin.notifications.domain.PersistedUser
 import me.seravkin.notifications.persistance.{NotificationsRepository, Page}
 import me.seravkin.notifications.test.mocks.MockBotState._
 
-final class MockNotificationRepository[F[_]: Monad] extends NotificationsRepository[StateT[F, MockBotState, ?]] {
+final class MockNotificationRepository[F[_]: Monad] extends NotificationsRepository[StateT[F, MockBotState, *]] {
 
   override def apply(id: Long): StateT[F, MockBotState, Option[Notification]] =
     StateT.get[F, MockBotState].map(_.notifications.find(n => n.id == id))

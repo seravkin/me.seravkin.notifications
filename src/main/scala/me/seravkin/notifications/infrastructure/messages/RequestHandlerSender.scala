@@ -4,7 +4,7 @@ import cats.effect.Sync
 import cats.implicits._
 import com.bot4s.telegram.methods.{EditMessageText, SendMessage}
 import com.bot4s.telegram.models.{InlineKeyboardButton, InlineKeyboardMarkup}
-import me.seravkin.tg.adapter.requests.RequestHandlerF
+import me.seravkin.notifications.infrastructure.telegram.requests.RequestHandlerF
 
 final class RequestHandlerSender[F[_]: Sync](requestHandlerF: RequestHandlerF[F]) extends Sender[F] {
 

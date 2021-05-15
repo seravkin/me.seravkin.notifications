@@ -1,8 +1,8 @@
 package me.seravkin.notifications.persistance.botio
 
 import java.time.{Duration, LocalDateTime}
-
 import cats._
+import cats.effect.Bracket
 import cats.implicits._
 import doobie._
 import doobie.implicits._
@@ -13,7 +13,7 @@ import me.seravkin.notifications.infrastructure.BotF
 import me.seravkin.notifications.persistance.{NotificationsRepository, Page}
 
 
-final class DoobieNotificationsRepository[F[_]: Monad] extends NotificationsRepository[BotF[F, ?]] with BotIORepository[F] {
+final class DoobieNotificationsRepository[F[_]: Monad: Bracket[*[_], Throwable]] extends NotificationsRepository[BotF[F, *]] with BotIORepository[F] {
 
   private[this] case class NotificationFlatten(id: Long, userId: Long, text: String, kind: String,
                                                isActive: Boolean,
@@ -59,7 +59,7 @@ final class DoobieNotificationsRepository[F[_]: Monad] extends NotificationsRepo
   }
 
   private implicit val DateTimeMeta: Meta[LocalDateTime] =
-    Meta[java.sql.Timestamp].imap(
+    javasql.TimestampMeta.imap(
       ts => ts.toLocalDateTime)(
       dt => java.sql.Timestamp.valueOf(dt)
     )

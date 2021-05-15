@@ -9,7 +9,7 @@ import cats.syntax.functor._
 import me.seravkin.notifications.domain.ast.RecurrentAst
 import me.seravkin.notifications.domain.interpreter.Dates.{Periodic, RecurrencyType}
 
-final class RecurrentApplicativeAst[F[_]: MonadError[?[_], String]
+final class RecurrentApplicativeAst[F[_]: MonadError[*[_], String]
                                         : DateProvider] extends RecurrentAst[F[Dates]] {
 
   override def everyDayOfMonth(days: Set[Int], t: F[Dates]): F[Dates] =

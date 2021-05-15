@@ -16,9 +16,9 @@ final case class MockBotState(users: List[PersistedUser] = Nil,
 
 object MockBotState {
 
-  val messages = lens[MockBotState] >> 'sentMessages
-  val state = lens[MockBotState] >> 'chatState
-  val notifications = lens[MockBotState] >> 'notifications
-  val compiled = lens[MockBotState] >> 'compiledDatesIdToDate
+  val messages: Lens[MockBotState, List[MockMessage]] = lens[MockBotState] >> Symbol("sentMessages")
+  val state: Lens[MockBotState, ChatState] = lens[MockBotState] >> Symbol("chatState")
+  val notifications: Lens[MockBotState, List[Notification]] = lens[MockBotState] >> Symbol("notifications")
+  val compiled: Lens[MockBotState, Map[Long, LocalDateTime]] = lens[MockBotState] >> Symbol("compiledDatesIdToDate")
 
 }

@@ -6,7 +6,7 @@ import me.seravkin.notifications.bot.ChatState
 import me.seravkin.notifications.infrastructure.state.ChatStateRepository
 import me.seravkin.notifications.test.mocks.MockBotState._
 
-final class MockChatStateRepository[F[_]: Applicative] extends ChatStateRepository[ChatState, StateT[F, MockBotState, ?]] {
+final class MockChatStateRepository[F[_]: Applicative] extends ChatStateRepository[ChatState, StateT[F, MockBotState, *]] {
   override def get(chatId: Long): StateT[F, MockBotState, ChatState] =
     StateT.get[F, MockBotState].map(_.chatState)
 

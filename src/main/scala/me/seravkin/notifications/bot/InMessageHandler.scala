@@ -9,9 +9,9 @@ import me.seravkin.notifications.domain.PersistedUser
 import me.seravkin.notifications.infrastructure.messages.Message.{CommandWithQuotedArgs, TailAsText}
 import me.seravkin.notifications.infrastructure.messages.Sender
 import me.seravkin.notifications.infrastructure.state.ChatStateRepository
+import me.seravkin.notifications.infrastructure.telegram.matching.ContainsText
 import me.seravkin.notifications.infrastructure.time.SystemDateTime
 import me.seravkin.notifications.persistance.NotificationsRepository
-import me.seravkin.tg.adapter.matching._
 
 object InMessageHandler {
 

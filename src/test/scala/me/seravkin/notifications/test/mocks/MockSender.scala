@@ -6,7 +6,7 @@ import me.seravkin.notifications.domain.PersistedUser
 import me.seravkin.notifications.infrastructure.messages.{Button, Sender}
 import me.seravkin.notifications.test.mocks.MockBotState._
 
-final class MockSender[F[_]: Monad] extends Sender[StateT[F, MockBotState, ?]] {
+final class MockSender[F[_]: Monad] extends Sender[StateT[F, MockBotState, *]] {
   override def ask(chatId: Long, text: String, buttonWithCommand: List[Button] = Nil, idToEdit: Option[Int] = None):
     StateT[F, MockBotState, Int] =
     idToEdit match {

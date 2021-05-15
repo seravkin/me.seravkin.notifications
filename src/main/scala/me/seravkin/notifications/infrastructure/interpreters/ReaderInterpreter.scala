@@ -13,7 +13,7 @@ import doobie.util.transactor.{Strategy, Transactor}
 import scala.concurrent.ExecutionContext
 
 final class ReaderInterpreter(blockingEc: ExecutionContext, xa: => Connection)
-                             (implicit contextShift: ContextShift[IO]) extends (ReaderT[IO, Transactor[IO], ?] ~> IO) {
+                             (implicit contextShift: ContextShift[IO]) extends (ReaderT[IO, Transactor[IO], *] ~> IO) {
   override def apply[A](fa: ReaderT[IO, Transactor[IO], A]): IO[A] =
     IO(xa).bracketCase { connection =>
 
@@ -21,8 +21,8 @@ final class ReaderInterpreter(blockingEc: ExecutionContext, xa: => Connection)
 
       val transactor = Transactor[IO, Connection](
         connection,
-        IO.pure[Connection],
-        KleisliInterpreter[IO](blockingEc).ConnectionInterpreter,
+        Resource.pure[IO, Connection],
+        KleisliInterpreter[IO](Blocker.liftExecutionContext(blockingEc)).ConnectionInterpreter,
         Strategy.default.copy(always = unit, after = unit, oops = unit))
 
       fa(transactor)

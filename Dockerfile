@@ -1,4 +1,4 @@
-FROM hseeberger/scala-sbt:11.0.10_1.5.2_2.12.13 AS build-env
+FROM hseeberger/scala-sbt:11.0.10_1.5.2_2.13.5 AS build-env
 
 WORKDIR /app
 

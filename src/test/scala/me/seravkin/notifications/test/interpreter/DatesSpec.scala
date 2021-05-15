@@ -1,11 +1,11 @@
 package me.seravkin.notifications.test.interpreter
 
 import java.time.{Duration, LocalDateTime}
-
 import me.seravkin.notifications.domain.interpreter.Dates._
-import org.scalatest.{FlatSpec, Matchers}
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.should.Matchers
 
-class DatesSpec extends FlatSpec with Matchers {
+class DatesSpec extends AnyFlatSpec with Matchers {
 
   private[this] val previousNow = LocalDateTime.of(2018, 10, 10, 10, 10)
   private[this] val now = LocalDateTime.of(2018, 11, 11, 11, 11)

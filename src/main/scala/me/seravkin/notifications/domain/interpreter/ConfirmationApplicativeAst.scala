@@ -7,7 +7,7 @@ import cats.implicits._
 import me.seravkin.notifications.domain.interpreter.Dates._
 import me.seravkin.notifications.domain.ast._
 
-final class ConfirmationApplicativeAst[F[_]: DateProvider: MonadError[?[_], String]] extends ConfirmationAst[F[Dates]] {
+final class ConfirmationApplicativeAst[F[_]: DateProvider: MonadError[*[_], String]] extends ConfirmationAst[F[Dates]] {
   override def confirmation(duration: Option[Duration], t: F[Dates]): F[Dates] =
     t.flatMap {
       case OneDate(dt) =>

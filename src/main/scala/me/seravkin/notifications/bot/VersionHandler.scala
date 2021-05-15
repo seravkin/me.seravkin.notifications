@@ -2,7 +2,7 @@ package me.seravkin.notifications.bot
 
 import com.bot4s.telegram.models.Message
 import me.seravkin.notifications.infrastructure.messages.Sender
-import me.seravkin.tg.adapter.matching.ContainsText
+import me.seravkin.notifications.infrastructure.telegram.matching.ContainsText
 
 object VersionHandler {
   def apply[F[_]](sender: Sender[F]): BotHandler[Message, F] = {

@@ -1,24 +1,24 @@
 package me.seravkin.notifications.test.parsing
 
 import java.time.{Duration, LocalDateTime}
-
 import cats.data.ReaderT
 import cats.mtl.implicits._
 import cats.instances.either._
 import me.seravkin.notifications.domain.interpreter.Dates.OneDate
 import me.seravkin.notifications.domain.interpreter._
 import me.seravkin.notifications.domain.parsing.Period.Morning
-import org.scalatest.{FlatSpec, Matchers}
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.should.Matchers
 
-class NotificationProgramSpec  extends FlatSpec with Matchers  {
+class NotificationProgramSpec  extends AnyFlatSpec with Matchers  {
 
-  private[this] type AstF[A] = ReaderT[Either[String, ?], LocalDateTime, A]
+  private[this] type AstF[A] = ReaderT[Either[String, *], LocalDateTime, A]
   private[this] val now = LocalDateTime.of(2017,10,9,11,23)
 
   private[this] val durationAst = new DurationApplicativeAst[AstF]
   private[this] val dateAst = new DateApplicativeAst[AstF]
   private[this] val timeAst = new TimeApplicativeAst[AstF](
-    (i: Int) => ReaderT[Either[String, ?], LocalDateTime, Int]
+    (i: Int) => ReaderT[Either[String, *], LocalDateTime, Int]
       (_ => Right(new util.Random(1).nextInt(i)))
   )
   private[this] val relativeAst = new RelativeApplicativeAst[AstF]
